@@ -109,6 +109,13 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
+        DB::table('payment_methods')->insert([
+            ['id' => 1, 'code' => 'PAY-CASH', 'name' => 'Tunai / Cash', 'type' => 'cash', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'code' => 'PAY-QRIS', 'name' => 'QRIS (GoPay / OVO / Dana)', 'type' => 'qris', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'code' => 'PAY-TRF', 'name' => 'Transfer Bank (BCA / Mandiri / BRI)', 'type' => 'transfer', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'code' => 'PAY-CARD', 'name' => 'Kartu Debit / Kredit (EDC)', 'type' => 'card', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         // 6. Categories
         $catId = DB::table('categories')->insertGetId([
             'name' => 'Plastik & Wadah Serbaguna',
