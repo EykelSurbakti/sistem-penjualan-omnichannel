@@ -12,6 +12,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Cegah crash/duplikasi jika database sudah pernah di-seed sebelumnya
+        if (DB::table('outlets')->count() > 0) {
+            return;
+        }
+
         // 1. Create Roles
         $roleAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
         $roleManager = Role::firstOrCreate(['name' => 'Manager Outlet']);
