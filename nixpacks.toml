@@ -1,10 +1,22 @@
 # Konfigurasi Otomatis Build & Deploy untuk Railway.app (Nixpacks)
 [phases.setup]
-nixPkgs = ["php83", "php83Packages.composer", "nodejs_20"]
+nixPkgs = [
+    "php83",
+    "php83Packages.composer",
+    "php83Extensions.intl",
+    "php83Extensions.pdo_mysql",
+    "php83Extensions.mbstring",
+    "php83Extensions.bcmath",
+    "php83Extensions.zip",
+    "php83Extensions.gd",
+    "php83Extensions.curl",
+    "php83Extensions.xml",
+    "nodejs_20"
+]
 
 [phases.build]
 cmds = [
-    "composer install --optimize-autoloader --no-dev",
+    "composer install --optimize-autoloader --no-dev --no-interaction",
     "npm ci || npm install",
     "npm run build",
     "php artisan filament:optimize"
