@@ -12,7 +12,25 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Cegah crash/duplikasi jika database sudah pernah di-seed sebelumnya
+        // 0. Selalu pastikan akun Master Admin (admin@gmail.com) tersedia di lokal maupun Railway cloud
+        try {
+            $roleAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
+            $adminGmail = User::firstOrCreate([
+                'email' => 'admin@gmail.com',
+            ], [
+                'name' => 'Master Admin Muliku',
+                'password' => Hash::make('password'),
+                'outlet_id' => null, // null = Master Monitoring (Semua Outlet)
+                'role_label' => 'Master Admin / Owner',
+                'allowed_modules' => ['all'],
+                'security_settings' => [],
+            ]);
+            $adminGmail->assignRole($roleAdmin);
+        } catch (\Throwable $e) {
+            // abaikan jika tabel roles belum siap
+        }
+
+        // Cegah crash/duplikasi outlet jika database sudah pernah di-seed sebelumnya
         if (DB::table('outlets')->count() > 0) {
             return;
         }
