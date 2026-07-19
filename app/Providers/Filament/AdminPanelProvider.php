@@ -81,6 +81,88 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->databaseNotificationsPolling('5s')
             ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn () => \Illuminate\Support\Facades\Blade::render('
+                    <style>
+                        /* =========================================================================
+                           GLOBAL MOBILE RESPONSIVE OPTIMIZATION (ANTI GESER-GESER / 0% SIDEWAYS SCROLL)
+                           ========================================================================= */
+                        @media (max-width: 768px) {
+                            /* Matikan scroll horizontal pada kontainer tabel Filament agar langsung pas di layar HP */
+                            .fi-ta-content, .fi-ta-ctn, .fi-ta-table-container {
+                                overflow-x: visible !important;
+                                width: 100% !important;
+                            }
+                            /* Ubah tabel menjadi kartu vertikal yang rapi di layar HP */
+                            .fi-ta-table {
+                                display: block !important;
+                                width: 100% !important;
+                            }
+                            .fi-ta-table thead {
+                                display: none !important; /* Sembunyikan header tabel, setiap baris jadi kartu mandiri */
+                            }
+                            .fi-ta-table tbody {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                gap: 14px !important;
+                                padding: 8px 4px !important;
+                            }
+                            .fi-ta-table tbody tr.fi-ta-row {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                background: #ffffff !important;
+                                border: 1.5px solid #E2E8F0 !important;
+                                border-radius: 18px !important;
+                                padding: 14px 16px !important;
+                                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+                                gap: 8px !important;
+                                position: relative !important;
+                                width: 100% !important;
+                                box-sizing: border-box !important;
+                            }
+                            .dark .fi-ta-table tbody tr.fi-ta-row {
+                                background: #1E293B !important;
+                                border-color: #334155 !important;
+                            }
+                            .fi-ta-table tbody tr.fi-ta-row td.fi-ta-cell {
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: space-between !important;
+                                width: 100% !important;
+                                padding: 6px 0 !important;
+                                border-bottom: 1px dashed #F1F5F9 !important;
+                                white-space: normal !important;
+                                word-break: break-word !important;
+                                box-sizing: border-box !important;
+                            }
+                            .dark .fi-ta-table tbody tr.fi-ta-row td.fi-ta-cell {
+                                border-bottom-color: #334155 !important;
+                            }
+                            .fi-ta-table tbody tr.fi-ta-row td.fi-ta-cell:last-child {
+                                border-bottom: none !important;
+                                padding-top: 10px !important;
+                                justify-content: flex-end !important;
+                            }
+                            .fi-ta-actions {
+                                display: flex !important;
+                                flex-wrap: wrap !important;
+                                gap: 8px !important;
+                                justify-content: flex-end !important;
+                                width: 100% !important;
+                            }
+                            /* Sembunyikan scrollbar pada bilah filter namun tetap bisa discroll halus */
+                            .no-scrollbar::-webkit-scrollbar {
+                                display: none !important;
+                            }
+                            .no-scrollbar {
+                                -ms-overflow-style: none !important;
+                                scrollbar-width: none !important;
+                            }
+                        }
+                    </style>
+                ')
+            )
+            ->renderHook(
                 \Filament\View\PanelsRenderHook::BODY_END,
                 fn () => \Illuminate\Support\Facades\Blade::render('
                     @include("filament.components.admin-realtime-notifications")

@@ -123,20 +123,21 @@
              ===================================================================== --}}
         @else
             {{-- Bilah Filter Toko & Pencarian --}}
+            {{-- Bilah Filter Toko & Pencarian --}}
             <div class="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm space-y-3">
                 
-                {{-- Pilihan Toko Lengkap (Anti-Hilang) --}}
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                {{-- Pilihan Toko Lengkap (Horizontal Scrollable Pill Bar di HP agar tidak makan tinggi layar) --}}
+                <div style="display: flex; gap: 8px; align-items: center; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
                     <button
                         wire:click="setOutlet(null)"
-                        style="padding: 6px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid {{ is_null($selectedOutletId) ? '#2563EB' : '#E5E7EB' }}; cursor: pointer; transition: 0.2s; {{ is_null($selectedOutletId) ? 'background: #2563EB; color: #ffffff;' : 'background: #F3F4F6; color: #374151;' }}"
+                        style="padding: 6px 14px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid {{ is_null($selectedOutletId) ? '#2563EB' : '#E5E7EB' }}; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; {{ is_null($selectedOutletId) ? 'background: #2563EB; color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.3);' : 'background: #F3F4F6; color: #374151;' }}"
                     >
                         Semua Toko (Konsolidasi)
                     </button>
                     @foreach($this->outlets as $outlet)
                         <button
                             wire:click="setOutlet({{ $outlet->id }})"
-                            style="padding: 6px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid {{ $selectedOutletId === $outlet->id ? '#2563EB' : '#E5E7EB' }}; cursor: pointer; transition: 0.2s; {{ $selectedOutletId === $outlet->id ? 'background: #2563EB; color: #ffffff;' : 'background: #F3F4F6; color: #374151;' }}"
+                            style="padding: 6px 14px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid {{ $selectedOutletId === $outlet->id ? '#2563EB' : '#E5E7EB' }}; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; {{ $selectedOutletId === $outlet->id ? 'background: #2563EB; color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.3);' : 'background: #F3F4F6; color: #374151;' }}"
                         >
                             {{ $outlet->name }}
                         </button>
@@ -174,36 +175,36 @@
                             class="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-500 dark:hover:border-blue-500 shadow-sm transition cursor-pointer space-y-2.5"
                         >
                             {{-- Baris 1: Nomor Pesanan & Waktu --}}
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-black text-gray-900 dark:text-white">
+                            <div class="flex items-start justify-between gap-2 flex-wrap">
+                                <span class="text-sm font-black text-gray-900 dark:text-white break-all">
                                     {{ $order->order_number }}
                                 </span>
-                                <span class="text-xs font-semibold text-gray-400">
+                                <span class="text-[11px] font-semibold text-gray-400 whitespace-nowrap">
                                     {{ \Carbon\Carbon::parse($order->created_at)->format('H:i') }} WIB • {{ \Carbon\Carbon::parse($order->created_at)->translatedFormat('d M Y') }}
                                 </span>
                             </div>
 
                             {{-- Baris 2: Toko & Kasir --}}
-                            <div class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                                <div class="p-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                            <div class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 flex-wrap">
+                                <div class="p-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
                                     <x-heroicon-m-computer-desktop class="w-3.5 h-3.5" />
                                 </div>
-                                <span class="font-extrabold text-gray-900 dark:text-white">
+                                <span class="font-extrabold text-gray-900 dark:text-white break-words">
                                     {{ $order->outlet?->name ?: 'Toko' }}
                                 </span>
                                 <span class="text-gray-400">•</span>
-                                <span class="font-medium text-gray-500">
+                                <span class="font-medium text-gray-500 break-words">
                                     Kasir: {{ $order->cashier?->name ?: '-' }}
                                 </span>
                             </div>
 
                             {{-- Baris 3: Status LUNAS / DIPENUHI & Nominal Rp --}}
-                            <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800/60">
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800/60 flex-wrap gap-2">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px] tracking-wide">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px] tracking-wide uppercase">
                                         {{ $order->payment_status === 'paid' ? 'LUNAS' : strtoupper($order->payment_status) }}
                                     </span>
-                                    <span class="px-2.5 py-0.5 rounded-full bg-blue-500 text-white font-black text-[10px] tracking-wide">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-blue-500 text-white font-black text-[10px] tracking-wide uppercase">
                                         DIPENUHI
                                     </span>
                                 </div>
