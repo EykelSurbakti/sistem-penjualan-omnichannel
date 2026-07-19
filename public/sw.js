@@ -30,7 +30,6 @@ self.addEventListener("push", function (event) {
     const options = {
         body: data.body || "Transaksi baru telah diproses oleh kasir.",
         icon: data.icon || "/favicon.ico",
-        badge: "/favicon.ico",
         vibrate: [200, 100, 200, 100, 200],
         requireInteraction: true,
         renotify: true,
@@ -40,7 +39,14 @@ self.addEventListener("push", function (event) {
         }
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(
+        self.registration.showNotification(title, options).catch(function(e) {
+            return self.registration.showNotification(title, {
+                body: options.body,
+                vibrate: [200, 100, 200]
+            });
+        })
+    );
 });
 
 self.addEventListener("notificationclick", function (event) {

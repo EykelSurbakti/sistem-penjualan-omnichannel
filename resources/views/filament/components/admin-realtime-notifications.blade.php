@@ -22,11 +22,17 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Registrasi Service Worker & VAPID Web Push (Untuk notifikasi saat browser/PWA ditutup total)
-    function setupWebPushSubscription() {
+    function setupWebPushSubscription(showFeedback = false) {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             navigator.serviceWorker.register('/sw.js').then(function(reg) {
                 const vapidPublicKey = "{{ config('webpush.vapid.public_key') ?: env('VAPID_PUBLIC_KEY') }}";
-                if (vapidPublicKey && Notification.permission === 'granted') {
+                if (!vapidPublicKey) {
+                    if (showFeedback) {
+                        alert("⚠️ PERHATIAN: VAPID_PUBLIC_KEY belum terdeteksi di server Railway Anda! Pastikan 3 variabel VAPID sudah dipasang di tab Variables Railway.");
+                    }
+                    return;
+                }
+                if (Notification.permission === 'granted') {
                     reg.pushManager.getSubscription().then(function(sub) {
                         if (!sub) {
                             reg.pushManager.subscribe({
@@ -40,8 +46,12 @@ document.addEventListener("DOMContentLoaded", function() {
                                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                     },
                                     body: JSON.stringify(newSub)
+                                }).then(() => {
+                                    if (showFeedback) alert('Sukses! HP/Browser ini resmi terdaftar ke server Railway untuk menerima notifikasi pop-up saat aplikasi ditutup.');
                                 });
-                            }).catch(function(err) {});
+                            }).catch(function(err) {
+                                if (showFeedback) alert('⚠️ Gagal berlangganan push service FCM: ' + err.message);
+                            });
                         } else {
                             fetch('/admin/api/push-subscribe', {
                                 method: 'POST',
@@ -50,18 +60,22 @@ document.addEventListener("DOMContentLoaded", function() {
                                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                 },
                                 body: JSON.stringify(sub)
+                            }).then(() => {
+                                if (showFeedback) alert('Sukses! Langganan notifikasi HP/Browser Anda telah diperbarui di server Railway.');
                             });
                         }
                     });
                 }
-            }).catch(function(err) {});
+            }).catch(function(err) {
+                if (showFeedback) alert('⚠️ Gagal mendaftarkan Service Worker: ' + err.message);
+            });
         }
     }
 
     // Minta izin notifikasi browser/HP (jika belum diizinkan) & daftarkan Web Push
     if ("Notification" in window) {
         if (Notification.permission === "granted") {
-            setupWebPushSubscription();
+            setupWebPushSubscription(false);
         }
     }
 
@@ -83,11 +97,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if ("Notification" in window) {
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    setupWebPushSubscription();
+                    setupWebPushSubscription(true);
                     pushBtn.innerHTML = '✅ <span>Notifikasi PC Aktif</span>';
                     pushBtn.style.background = '#10B981';
                     pushBtn.style.borderColor = '#34D399';
-                    alert('Sukses! Browser ini sekarang telah terdaftar untuk menerima notifikasi pop-up saat kasir bertransaksi.');
                 } else {
                     alert('Izin notifikasi ditolak oleh browser. Silakan klik ikon gembok di samping alamat URL browser untuk mengizinkan.');
                 }

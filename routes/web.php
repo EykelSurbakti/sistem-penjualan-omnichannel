@@ -153,4 +153,24 @@ Route::middleware(['auth'])->group(function () {
         }
         return response()->json(['success' => true]);
     })->name('admin.api.push-subscribe');
+
+    Route::get('/admin/api/push-status', function () {
+        if (!auth()->check() || auth()->user()->outlet_id !== null) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        $pubKey = config('webpush.vapid.public_key') ?: env('VAPID_PUBLIC_KEY');
+        $privKey = config('webpush.vapid.private_key') ?: env('VAPID_PRIVATE_KEY');
+        return response()->json([
+            'status' => 'OK',
+            'server_time' => now()->format('Y-m-d H:i:s'),
+            'vapid_configured' => (!empty($pubKey) && !empty($privKey)),
+            'vapid_public_key_preview' => $pubKey ? substr($pubKey, 0, 15) . '...' : 'NOT_SET_IN_RAILWAY_VARIABLES',
+            'current_user_id' => auth()->id(),
+            'current_user_email' => auth()->user()->email,
+            'user_subscriptions_count' => \Illuminate\Support\Facades\DB::table('push_subscriptions')->where('subscribable_id', auth()->id())->count(),
+            'all_database_subscriptions' => \Illuminate\Support\Facades\DB::table('push_subscriptions')->get(['id', 'subscribable_id', 'endpoint', 'updated_at']),
+            'last_webpush_error' => cache()->get('last_webpush_error', 'No errors logged yet'),
+            'last_webpush_success' => cache()->get('last_webpush_success', 'No push sent yet via observer'),
+        ]);
+    })->name('admin.api.push-status');
 });
