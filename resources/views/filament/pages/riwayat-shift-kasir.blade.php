@@ -16,28 +16,28 @@
         {{-- ==================================================================================
              MODE MONITORING MASTER PEMILIK TOKO (TANPA FORM BUKA/TUTUP SHIFT)
              ================================================================================== --}}
-        <div class="p-4 md:p-6 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-700 text-white shadow-lg flex flex-col gap-4">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="bg-white/20 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                            MONITORING LIVE CABANG
+        <div style="padding: 24px; border-radius: 20px; background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 100%); color: #ffffff; box-shadow: 0 10px 25px -5px rgba(29, 78, 216, 0.4); display: flex; flex-direction: column; gap: 18px; border: 1px solid rgba(255, 255, 255, 0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <span style="background: rgba(255, 255, 255, 0.22); color: #ffffff; font-size: 11px; font-weight: 900; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(255, 255, 255, 0.3);">
+                            ⚡ MONITORING LIVE CABANG
                         </span>
-                        <span class="text-xs text-blue-200 font-bold">
+                        <span style="font-size: 13px; color: #BFDBFE; font-weight: 700;">
                             &bull; {{ now()->format('d M Y') }}
                         </span>
                     </div>
-                    <h2 class="text-lg md:text-2xl font-black text-white leading-tight">
+                    <h2 style="font-size: 24px; font-weight: 900; color: #ffffff; margin: 0 0 6px 0; line-height: 1.3;">
                         Monitoring Absen & Shift Kasir Cabang
                     </h2>
-                    <p class="text-xs md:text-sm text-blue-100 leading-relaxed max-w-2xl">
+                    <p style="font-size: 13px; color: #E0F2FE; margin: 0; line-height: 1.6; max-width: 650px;">
                         Pantau jadwal absen masuk, kasir bertugas, modal awal laci, dan setoran akhir di seluruh cabang toko Anda secara real-time dari HP.
                     </p>
                 </div>
 
-                <div class="bg-white/10 border border-white/20 p-3 md:p-4 rounded-xl text-center self-start md:self-center shrink-0 w-full md:w-auto">
-                    <span class="text-[10px] md:text-xs font-bold text-blue-200 block uppercase tracking-wider">Sesi Shift Terbuka Saat Ini</span>
-                    <span class="text-xl md:text-2xl font-black text-white">
+                <div style="background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.25); padding: 16px 24px; border-radius: 16px; text-align: center; backdrop-filter: blur(8px); min-width: 200px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #BFDBFE; display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Sesi Shift Terbuka Saat Ini</span>
+                    <span style="font-size: 26px; font-weight: 900; color: #ffffff; display: block;">
                         {{ \App\Models\ShiftSession::where('status', 'open')->count() }} Cabang Aktif
                     </span>
                 </div>
