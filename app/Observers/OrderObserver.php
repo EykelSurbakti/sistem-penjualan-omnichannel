@@ -30,14 +30,6 @@ class OrderObserver
 
                 foreach ($admins as $admin) {
                     $admin->notifyNow($notif->toDatabase());
-                    try {
-                        $admin->notifyNow(new \App\Notifications\NewOrderWebPushNotification($order));
-                        cache()->put('last_webpush_success', "Sent push for order {$order->order_number} to admin ID {$admin->id} at " . now()->format('H:i:s'), now()->addHours(24));
-                    } catch (\Throwable $e) {
-                        $err = "Admin {$admin->id} error: " . $e->getMessage();
-                        \Illuminate\Support\Facades\Log::error($err);
-                        cache()->put('last_webpush_error', $err . " at " . now()->format('H:i:s'), now()->addHours(24));
-                    }
                 }
             }
         } catch (\Throwable $e) {

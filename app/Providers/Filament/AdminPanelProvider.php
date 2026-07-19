@@ -85,13 +85,25 @@ class AdminPanelProvider extends PanelProvider
                 fn () => \Illuminate\Support\Facades\Blade::render('
                     @include("filament.components.admin-realtime-notifications")
                     <script>
-                        document.addEventListener("DOMContentLoaded", function() {
+                        // Pastikan sidebar selalu tertutup saat awal buka di perangkat HP/mobile (< 1024px)
+                        function ensureMobileSidebarClosed() {
                             if (window.innerWidth < 1024) {
-                                // Pastikan drawer menu samping tertutup saat halaman pertama dibuka di HP
-                                const backdrop = document.querySelector(".fi-sidebar-close-overlay");
-                                if (backdrop) backdrop.click();
+                                localStorage.setItem("fi_sidebar_is_open", "false");
+                                if (window.Alpine && Alpine.store("sidebar")) {
+                                    Alpine.store("sidebar").isOpen = false;
+                                    if (typeof Alpine.store("sidebar").close === "function") {
+                                        Alpine.store("sidebar").close();
+                                    }
+                                }
+                                const closeOverlay = document.querySelector(".fi-sidebar-close-overlay");
+                                if (closeOverlay && closeOverlay.offsetParent !== null) {
+                                    closeOverlay.click();
+                                }
                             }
-                        });
+                        }
+                        document.addEventListener("DOMContentLoaded", ensureMobileSidebarClosed);
+                        document.addEventListener("alpine:initialized", ensureMobileSidebarClosed);
+                        document.addEventListener("livewire:navigated", ensureMobileSidebarClosed);
                     </script>
                 ')
             )
