@@ -25,11 +25,20 @@ class ProductionSterilizationSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
 
         $this->command->info('🧹 [1/5] Menghapus seluruh riwayat pesanan (Orders & Order Items)...');
-        DB::table('order_items')->truncate();
-        DB::table('orders')->truncate();
+        if (Schema::hasTable('order_items')) {
+            DB::table('order_items')->truncate();
+        }
+        if (Schema::hasTable('orders')) {
+            DB::table('orders')->truncate();
+        }
 
         $this->command->info('🔒 [2/5] Menghapus seluruh riwayat absen & shift kasir (Shift Sessions)...');
-        DB::table('shift_sessions')->truncate();
+        if (Schema::hasTable('shift_user')) {
+            DB::table('shift_user')->truncate();
+        }
+        if (Schema::hasTable('shift_sessions')) {
+            DB::table('shift_sessions')->truncate();
+        }
 
         $this->command->info('📋 [3/5] Membersihkan log aktivitas (Activity Logs)...');
         if (Schema::hasTable('activity_logs')) {
@@ -40,7 +49,9 @@ class ProductionSterilizationSeeder extends Seeder
         }
 
         $this->command->info('🏪 [4/5] Mengatur ulang 3 Cabang Toko Resmi (Muliku Prabotan & Plastik)...');
-        DB::table('outlets')->truncate();
+        if (Schema::hasTable('outlets')) {
+            DB::table('outlets')->truncate();
+        }
 
         $prabotanId = DB::table('outlets')->insertGetId([
             'code' => 'OUT-PRB',
@@ -77,7 +88,9 @@ class ProductionSterilizationSeeder extends Seeder
 
         $this->command->info('👥 [5/5] Memastikan hanya 4 Akun Pengguna Resmi di sistem...');
         // Hapus semua user terlebih dahulu agar bersih steril
-        DB::table('users')->truncate();
+        if (Schema::hasTable('users')) {
+            DB::table('users')->truncate();
+        }
 
         $roleAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
         $roleKasir = Role::firstOrCreate(['name' => 'Kasir POS']);
@@ -132,7 +145,9 @@ class ProductionSterilizationSeeder extends Seeder
 
         // Reset dan sesuaikan stok inventori untuk 3 cabang baru ini
         $this->command->info('📦 Menyesuaikan stok awal katalog untuk 3 cabang toko...');
-        DB::table('inventories')->truncate();
+        if (Schema::hasTable('inventories')) {
+            DB::table('inventories')->truncate();
+        }
         $products = Product::all();
         $outlets = [$prabotanId, $plastik01Id, $plastik02Id];
 
