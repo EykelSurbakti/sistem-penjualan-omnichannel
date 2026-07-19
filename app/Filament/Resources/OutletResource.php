@@ -24,6 +24,11 @@ class OutletResource extends Resource
         return auth()->check() && is_null(auth()->user()->outlet_id);
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && is_null(auth()->user()->outlet_id);
+    }
+
     public static function form(Form $form): Form
     {
         return $form

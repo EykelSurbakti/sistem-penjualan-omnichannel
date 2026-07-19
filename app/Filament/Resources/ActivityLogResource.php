@@ -23,6 +23,16 @@ class ActivityLogResource extends Resource
     protected static ?string $pluralModelLabel = 'Log Aktivitas & Audit Sistem';
     protected static ?int $navigationSort = 3;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->check() && is_null(auth()->user()->outlet_id);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && is_null(auth()->user()->outlet_id);
+    }
+
     public static function canCreate(): bool
     {
         return false;
