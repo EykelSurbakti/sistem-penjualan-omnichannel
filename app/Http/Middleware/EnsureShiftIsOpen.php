@@ -17,6 +17,15 @@ class EnsureShiftIsOpen
                 ->latest()
                 ->first();
 
+            // 1. CEK KEAMANAN: Jika kasir masih memiliki Shift yang TERBUKA, BLOKIR total upaya logout!
+            if ($activeShift && ($request->is('*logout*') || $request->routeIs('*logout*'))) {
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['message' => 'Anda tidak dapat keluar akun karena Shift Kasir masih TERBUKA. Silakan tutup shift terlebih dahulu.'], 403);
+                }
+                return redirect()->to('/portal-kasir?blocked_logout=1')->with('error', '⚠️ Anda tidak dapat keluar akun karena Shift Kasir Anda masih TERBUKA! Silakan rekap dan tutup shift terlebih dahulu.');
+            }
+
+            // 2. Jika tidak ada shift terbuka, wajibkan buka shift
             if (!$activeShift) {
                 // Allow logout or portal-kasir requests so they aren't trapped in a redirect loop
                 if (

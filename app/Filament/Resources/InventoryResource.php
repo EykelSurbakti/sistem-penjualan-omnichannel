@@ -48,12 +48,23 @@ class InventoryResource extends Resource
                         Forms\Components\TextInput::make('quantity')
                             ->label('Unit dalam Persediaan (Pcs)')
                             ->required()
-                            ->numeric(),
+                            ->numeric()
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->placeholder('0')
+                            ->default(null)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                         Forms\Components\TextInput::make('low_stock_threshold')
                             ->label('Ambang Batas Stok Sedikit')
                             ->required()
                             ->numeric()
-                            ->default(5),
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->placeholder('5')
+                            ->default(5)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 5 : (int) str_replace(',', '', (string) $state))
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                     ])->columns(2),
             ]);
     }
@@ -100,7 +111,7 @@ class InventoryResource extends Resource
                 Tables\Actions\EditAction::make()->label('Sesuaikan Stok'),
             ])
             ->emptyStateHeading('Data Inventaris Belum Ada')
-            ->emptyStateDescription('Stok produk untuk setiap cabang MALIKU STORE akan ditampilkan di sini.')
+            ->emptyStateDescription('Stok produk untuk setiap cabang Muliku Store akan ditampilkan di sini.')
             ->emptyStateIcon('heroicon-o-clipboard-document-list');
     }
 

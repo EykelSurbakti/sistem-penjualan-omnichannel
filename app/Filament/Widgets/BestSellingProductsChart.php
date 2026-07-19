@@ -53,12 +53,12 @@ class BestSellingProductsChart extends ChartWidget
                 'datasets' => [
                     [
                         'label' => 'Terjual (Unit)',
-                        'data' => [15, 12, 10, 8, 5],
-                        'backgroundColor' => ['#2563EB', '#10B981', '#F59E0B', '#6366F1', '#EC4899'],
+                        'data' => [0],
+                        'backgroundColor' => ['#94A3B8'],
                         'borderRadius' => 6,
                     ],
                 ],
-                'labels' => ['Kotak Pensil Kaleng', 'Acuan 110', 'Acuan 139', 'Acuan 143', 'Board Master'],
+                'labels' => ['Belum Ada Data'],
             ];
         }
 

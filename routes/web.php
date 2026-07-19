@@ -53,7 +53,7 @@ Route::middleware(['auth'])->group(function () {
                 'closed_at' => now(),
             ]);
 
-        ShiftSession::create([
+        $newShift = ShiftSession::create([
             'shift_id' => $shiftId,
             'user_id' => auth()->id(),
             'outlet_id' => $outletId,
@@ -62,6 +62,13 @@ Route::middleware(['auth'])->group(function () {
             'status' => 'open',
             'opened_at' => now(),
         ]);
+
+        \App\Models\ActivityLog::record(
+            'SHIFT',
+            'Shift Kasir',
+            "Membuka shift kasir baru atas nama '{$cashierName}' dengan modal awal Rp " . number_format($request->input('initial_cash', 0), 0, ',', '.'),
+            $newShift
+        );
 
         return redirect('/admin/pos-kasir');
     })->name('buka-shift');
@@ -73,15 +80,77 @@ Route::middleware(['auth'])->group(function () {
             ->first();
 
         if ($shift) {
+            $closingCash = (int) $request->input('closing_cash', 0);
             $shift->update([
                 'status' => 'closed',
                 'closed_at' => now(),
-                'closing_cash' => $request->input('closing_cash', 0),
+                'closing_cash' => $closingCash,
             ]);
+
+            \App\Models\ActivityLog::record(
+                'SHIFT',
+                'Shift Kasir',
+                "Menutup dan mengakhiri shift kasir atas nama '{$shift->cashier_name}' dengan uang akhir laci Rp " . number_format($closingCash, 0, ',', '.'),
+                $shift
+            );
         }
 
         return redirect('/portal-kasir');
     })->name('tutup-shift');
 
     Route::get('/katalog-toko', \App\Livewire\KatalogToko::class)->name('katalog-toko');
+
+    Route::get('/admin/api/check-new-orders', function (\Illuminate\Http\Request $request) {
+        if (!auth()->check() || auth()->user()->outlet_id !== null) {
+            return response()->json(['has_new' => false], 403);
+        }
+
+        $lastCheck = $request->query('last_check');
+        if (!$lastCheck) {
+            return response()->json([
+                'has_new' => false,
+                'server_time' => now()->format('Y-m-d H:i:s')
+            ]);
+        }
+
+        try {
+            // Gunakan perbandingan langsung string format Y-m-d H:i:s agar sinkron sempurna dengan zona waktu server database
+            $orders = \App\Models\Order::with('outlet')
+                ->where('created_at', '>', $lastCheck)
+                ->latest()
+                ->get();
+
+            return response()->json([
+                'has_new' => $orders->isNotEmpty(),
+                'server_time' => now()->format('Y-m-d H:i:s'),
+                'orders' => $orders->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'outlet_name' => $order->outlet?->name ?: 'Cabang Toko',
+                        'total_amount_formatted' => 'Rp ' . number_format($order->total_amount, 0, ',', '.'),
+                        'created_at' => $order->created_at->format('H:i:s'),
+                    ];
+                })
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'has_new' => false,
+                'server_time' => now()->format('Y-m-d H:i:s')
+            ]);
+        }
+    })->name('admin.api.check-new-orders');
+
+    Route::post('/admin/api/push-subscribe', function (\Illuminate\Http\Request $request) {
+        if (!auth()->check() || auth()->user()->outlet_id !== null) {
+            return response()->json(['success' => false], 403);
+        }
+        $endpoint = $request->input('endpoint');
+        $key = $request->input('keys.p256dh');
+        $token = $request->input('keys.auth');
+        if ($endpoint && $key && $token) {
+            auth()->user()->updatePushSubscription($endpoint, $key, $token);
+        }
+        return response()->json(['success' => true]);
+    })->name('admin.api.push-subscribe');
 });

@@ -144,14 +144,15 @@
                 </div>
 
                 {{-- Input Pencarian --}}
-                <div class="relative">
+                <div class="relative flex items-center">
+                    <x-heroicon-m-magnifying-glass class="w-4 h-4 text-gray-400 absolute pointer-events-none shrink-0" style="left: 12px !important;" />
                     <input
                         type="text"
                         wire:model.live.debounce.300ms="search"
                         placeholder="Cari nomor pesanan atau nama kasir..."
-                        class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style="padding-left: 36px !important;"
+                        class="w-full pr-4 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <x-heroicon-m-magnifying-glass class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                 </div>
 
             </div>

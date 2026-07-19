@@ -25,5 +25,9 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        \App\Models\Product::observe(\App\Observers\ProductObserver::class);
+        \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        \App\Models\Inventory::observe(\App\Observers\InventoryObserver::class);
     }
 }

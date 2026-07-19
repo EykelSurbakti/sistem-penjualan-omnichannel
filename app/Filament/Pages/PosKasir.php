@@ -263,9 +263,10 @@ class PosKasir extends Page
             $query->where('category_id', $this->selectedCategory);
         }
 
-        // Hanya tampilkan produk yang stok cabangnya > 0 dan batasi maksimal 120 item agar render DOM super kilat
+        // Hanya tampilkan produk yang stok cabangnya > 0, urutkan dari barang terlaris / sering terjual (sales_count), lalu abjad
         return $query->having('stock_in_outlet', '>', 0)
-            ->orderBy('name')
+            ->orderByDesc('products.sales_count')
+            ->orderBy('products.name')
             ->limit(120)
             ->get();
     }
@@ -372,6 +373,9 @@ class PosKasir extends Page
                 if ($inventory) {
                     $inventory->decrement('quantity', $item['quantity']);
                 }
+
+                // Increment sales_count pada produk untuk fitur Smart Sorting (Barang Laris Muncul di Depan)
+                Product::where('id', $item['product_id'])->increment('sales_count', $item['quantity']);
             }
 
             // 5. Add Loyalty points if customer exists
@@ -389,7 +393,7 @@ class PosKasir extends Page
                 'order_number' => $orderNumber,
                 'order_reference' => $orderNumber,
                 'date' => now()->format('d M Y, H:i'),
-                'outlet_name' => Outlet::find($this->selectedOutletId)?->name ?? 'MALIKU STORE',
+                'outlet_name' => Outlet::find($this->selectedOutletId)?->name ?? 'Muliku Store',
                 'cashier_name' => $this->activeShift?->cashier_name ?? auth()->user()->name ?? 'Kasir',
                 'items' => $this->cart,
                 'total' => $total,

@@ -47,10 +47,14 @@ class ProductResource extends Resource
             $outletSchemas[] = Forms\Components\TextInput::make('qty_outlet_' . $outlet->id)
                 ->label('Stok di ' . $outlet->name)
                 ->numeric()
-                ->default(0)
+                ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                ->stripCharacters(',')
+                ->placeholder('0')
+                ->default(null)
+                ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
                 ->prefix('Pcs')
                 ->visible(fn () => !auth()->user()?->outlet_id)
-                ->required();
+                ->extraInputAttributes(['onfocus' => 'this.select()']);
         }
 
         return $form
@@ -89,21 +93,35 @@ class ProductResource extends Resource
                             ->label('Harga Jual Toko (Rp)')
                             ->required()
                             ->numeric()
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
                             ->prefix('Rp')
-                            ->default(0),
+                            ->placeholder('0')
+                            ->default(null)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (float) str_replace(',', '', (string) $state))
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                         Forms\Components\TextInput::make('cost_price')
                             ->label('Harga Pokok Modal / HPP (Rp)')
                             ->required()
                             ->numeric()
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
                             ->prefix('Rp')
-                            ->default(0),
+                            ->placeholder('0')
+                            ->default(null)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (float) str_replace(',', '', (string) $state))
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                         Forms\Components\TextInput::make('qty_user_outlet')
                             ->label(fn () => 'Stok di ' . (auth()->user()?->outlet?->name ?: 'Cabang Anda'))
                             ->numeric()
-                            ->default(0)
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->placeholder('0')
+                            ->default(null)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
                             ->prefix('Pcs')
                             ->visible(fn () => (bool) auth()->user()?->outlet_id)
-                            ->required(),
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                     ], $outletSchemas, [
                         Forms\Components\Select::make('soldout_strategy')
                             ->label('Saat Stok Fisik Habis')

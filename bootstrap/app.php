@@ -1,5 +1,9 @@
 <?php
 
+if (!getenv('OPENSSL_CONF') && file_exists('C:/Users/eykel/.gemini/antigravity/scratch/php83/extras/ssl/openssl.cnf')) {
+    putenv('OPENSSL_CONF=C:/Users/eykel/.gemini/antigravity/scratch/php83/extras/ssl/openssl.cnf');
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

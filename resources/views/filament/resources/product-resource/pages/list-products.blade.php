@@ -80,13 +80,14 @@
 
             {{-- Pencarian --}}
             <div class="w-full lg:w-72 shrink-0">
-                <div class="relative">
-                    <x-heroicon-m-magnifying-glass class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <div class="relative flex items-center">
+                    <x-heroicon-m-magnifying-glass class="absolute w-4 h-4 text-gray-400 pointer-events-none shrink-0" style="left: 12px !important;" />
                     <input
                         wire:model.live.debounce.400ms="search"
                         type="text"
                         placeholder="Cari produk atau tags..."
-                        class="w-full pl-9 pr-4 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                        style="padding-left: 36px !important;"
+                        class="w-full pr-4 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                     />
                 </div>
             </div>

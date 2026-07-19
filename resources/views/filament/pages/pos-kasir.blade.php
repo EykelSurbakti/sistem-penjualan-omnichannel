@@ -34,8 +34,8 @@
                 </a>
 
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <h1 style="font-size: 13.5px; font-weight: 900; margin: 0; color: #ffffff; white-space: nowrap;">
-                        {{ auth()->user()->outlet->name ?? 'MALIKU STORE 03' }}
+                    <h1 style="font-size: 14px; font-weight: 900; margin: 0; color: #ffffff; white-space: nowrap; letter-spacing: 0.3px;">
+                        {{ auth()->user()->outlet->name ?? 'Muliku Store' }}
                     </h1>
                     <span style="background: #34D399; color: #064E3B; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">
                         POS
@@ -43,26 +43,11 @@
                 </div>
             </div>
 
-            {{-- Tengah: Search Bar --}}
-            <div style="flex: 1; max-width: 380px; position: relative;">
-                <input
-                    type="text"
-                    wire:model.live.debounce.250ms="search"
-                    placeholder="🔍 Cari nama barang / scan barcode..."
-                    style="width: 100%; padding: 5px 28px 5px 12px; border-radius: 6px; border: none; background: #ffffff; color: #0F172A; font-size: 12px; font-weight: 600; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);"
-                />
-                @if($search)
-                    <button wire:click="$set('search', '')" style="position: absolute; right: 8px; top: 4px; border: none; background: transparent; color: #64748B; cursor: pointer; font-weight: bold; font-size: 12px;">
-                        ✕
-                    </button>
-                @endif
-            </div>
-
             {{-- Kanan: Badge Kasir --}}
             <div style="display: flex; align-items: center; flex-shrink: 0;">
-                <div style="display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #34D399;"></span>
-                    <span style="font-size: 11px; font-weight: 800; color: #ffffff; white-space: nowrap;">
+                <div style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #34D399; box-shadow: 0 0 6px #34D399;"></span>
+                    <span style="font-size: 11.5px; font-weight: 800; color: #ffffff; white-space: nowrap;">
                         {{ $this->activeShift?->cashier_name ?? auth()->user()->name ?? 'Kasir' }}
                     </span>
                 </div>
@@ -78,22 +63,38 @@
             {{-- PANEL KIRI: KATALOG PRODUK --}}
             <main style="flex: 1; display: flex; flex-direction: column; background: #F8FAFC; border-right: 1px solid #CBD5E1; min-height: 0; min-width: 0;">
                 
-                {{-- Kategori Produk --}}
-                <div class="custom-scroll" style="padding: 6px 12px; background: #ffffff; border-bottom: 1px solid #E2E8F0; display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0;">
-                    <button
-                        wire:click="selectCategory(null)"
-                        style="padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; border: none; cursor: pointer; white-space: nowrap; transition: 0.15s; {{ is_null($selectedCategory) ? 'background: #1976D2; color: #ffffff;' : 'background: #F1F5F9; color: #334155;' }}"
-                    >
-                        Semua Produk
-                    </button>
-                    @foreach($this->categories as $category)
+                {{-- Bar Kendali Katalog: Search Bar & Kategori --}}
+                <div style="background: #ffffff; border-bottom: 1px solid #CBD5E1; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    
+                    {{-- Baris Atas: Kolom Pencarian --}}
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; max-width: 520px; position: relative; display: flex; align-items: center;">
+                            <x-heroicon-m-magnifying-glass style="width: 16px; height: 16px; position: absolute; left: 12px; color: #64748B; pointer-events: none;" />
+                            <input
+                                type="text"
+                                wire:model.live.debounce.250ms="search"
+                                placeholder="Cari barang berdasarkan nama atau kode SKU..."
+                                style="width: 100%; padding: 7px 30px 7px 36px; border-radius: 8px; border: 1.5px solid #E2E8F0; background: #F8FAFC; color: #0F172A; font-size: 12.5px; font-weight: 600; outline: none; transition: all 0.2s;"
+                                onfocus="this.style.borderColor='#1E88E5'; this.style.background='#ffffff'; this.style.boxShadow='0 0 0 3px rgba(30,136,229,0.12)';"
+                                onblur="this.style.borderColor='#E2E8F0'; this.style.background='#F8FAFC'; this.style.boxShadow='none';"
+                            />
+                            @if($search)
+                                <button wire:click="$set('search', '')" style="position: absolute; right: 10px; border: none; background: transparent; color: #64748B; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; align-items: center;" title="Hapus pencarian">
+                                    ✕
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Baris Bawah: Tombol Semua Produk --}}
+                    <div class="custom-scroll" style="display: flex; gap: 6px; overflow-x: auto; padding-top: 2px;">
                         <button
-                            wire:click="selectCategory({{ $category->id }})"
-                            style="padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; border: none; cursor: pointer; white-space: nowrap; transition: 0.15s; {{ $selectedCategory === $category->id ? 'background: #1976D2; color: #ffffff;' : 'background: #F1F5F9; color: #334155;' }}"
+                            wire:click="selectCategory(null)"
+                            style="padding: 5.5px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 800; border: none; cursor: pointer; white-space: nowrap; transition: 0.15s; background: #1976D2; color: #ffffff; box-shadow: 0 1px 2px rgba(25,118,210,0.3);"
                         >
-                            {{ $category->name }}
+                            Semua Produk
                         </button>
-                    @endforeach
+                    </div>
                 </div>
 
                 {{-- Daftar Produk --}}

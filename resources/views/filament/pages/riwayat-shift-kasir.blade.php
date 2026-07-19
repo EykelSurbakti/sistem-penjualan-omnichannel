@@ -209,7 +209,7 @@
                                 @endif
                             </td>
                             <td style="padding: 14px 18px; font-weight: 700; color: #0284C7;">
-                                {{ $shift->outlet->name ?? 'MALIKU STORE' }}
+                                {{ $shift->outlet->name ?? 'Muliku Store' }}
                             </td>
                             <td style="padding: 14px 18px;">
                                 @if($shift->status === 'open')

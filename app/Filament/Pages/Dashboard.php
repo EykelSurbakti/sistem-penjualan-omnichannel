@@ -61,6 +61,30 @@ class Dashboard extends BaseDashboard
         return Outlet::where('is_active', true)->get();
     }
 
+    protected function applyPeriodFilter($query, string $dateColumn = 'created_at', ?int &$hoursElapsed = null)
+    {
+        $now = now();
+        if ($this->period === 'today') {
+            $query->whereDate($dateColumn, $now->toDateString());
+            $hoursElapsed = max(1, $now->hour + 1);
+        } elseif ($this->period === 'yesterday') {
+            $query->whereDate($dateColumn, $now->copy()->subDay()->toDateString());
+            $hoursElapsed = 24;
+        } elseif ($this->period === 'week' || $this->period === '7_days') {
+            $query->where($dateColumn, '>=', $now->copy()->subDays(7)->startOfDay());
+            $hoursElapsed = max(1, 7 * 24);
+        } elseif ($this->period === 'month' || $this->period === 'this_month') {
+            $query->whereMonth($dateColumn, $now->month)->whereYear($dateColumn, $now->year);
+            $hoursElapsed = max(1, $now->day * 24);
+        } elseif ($this->period === 'year' || $this->period === 'this_year') {
+            $query->whereYear($dateColumn, $now->year);
+            $hoursElapsed = max(1, $now->dayOfYear * 24);
+        } else {
+            // all_time
+            $hoursElapsed = max(1, 365 * 24);
+        }
+    }
+
     public function getExecutiveMetricsProperty(): array
     {
         $query = Order::where('payment_status', 'paid');
@@ -68,21 +92,8 @@ class Dashboard extends BaseDashboard
             $query->where('outlet_id', $this->selectedMonitoringOutletId);
         }
 
-        $now = now();
-        if ($this->period === 'today') {
-            $query->whereDate('created_at', $now->toDateString());
-            $hoursElapsed = max(1, $now->hour + 1);
-        } elseif ($this->period === 'week') {
-            $query->whereBetween('created_at', [$now->copy()->startOfWeek(), $now->copy()->endOfDay()]);
-            $hoursElapsed = max(1, $now->diffInHours($now->copy()->startOfWeek()));
-        } elseif ($this->period === 'month') {
-            $query->whereBetween('created_at', [$now->copy()->startOfMonth(), $now->copy()->endOfDay()]);
-            $hoursElapsed = max(1, $now->diffInHours($now->copy()->startOfMonth()));
-        } else {
-            // 3_months
-            $query->where('created_at', '>=', $now->copy()->subMonths(3)->startOfDay());
-            $hoursElapsed = max(1, 90 * 24);
-        }
+        $hoursElapsed = 24;
+        $this->applyPeriodFilter($query, 'created_at', $hoursElapsed);
 
         $netSales = (clone $query)->sum('total_amount');
         $grossSales = $netSales;
@@ -103,24 +114,28 @@ class Dashboard extends BaseDashboard
         }
 
         $now = now();
-        if ($this->period === 'today') {
+        if ($this->period === 'today' || $this->period === 'yesterday') {
+            $targetDate = $this->period === 'today' ? $now->toDateString() : $now->copy()->subDay()->toDateString();
             $labels = ['0:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
             $data = [];
             $hours = [0, 3, 6, 9, 12, 15, 18, 21];
 
             foreach ($hours as $idx => $h) {
                 $start = $now->copy()->setTime($h, 0, 0);
+                if ($this->period === 'yesterday') {
+                    $start = $now->copy()->subDay()->setTime($h, 0, 0);
+                }
                 $endH = $idx < count($hours) - 1 ? $hours[$idx + 1] - 1 : 23;
-                $end = $now->copy()->setTime($endH, 59, 59);
+                $end = ($this->period === 'today' ? $now->copy() : $now->copy()->subDay())->setTime($endH, 59, 59);
 
-                $sum = (clone $query)->whereDate('created_at', $now->toDateString())
+                $sum = (clone $query)->whereDate('created_at', $targetDate)
                     ->whereBetween('created_at', [$start, $end])
                     ->sum('total_amount');
                 $data[] = (float) $sum;
             }
 
             return ['labels' => $labels, 'data' => $data];
-        } elseif ($this->period === 'week') {
+        } elseif ($this->period === 'week' || $this->period === '7_days') {
             $labels = [];
             $data = [];
             for ($i = 6; $i >= 0; $i--) {
@@ -130,7 +145,7 @@ class Dashboard extends BaseDashboard
                 $data[] = (float) $sum;
             }
             return ['labels' => $labels, 'data' => $data];
-        } elseif ($this->period === 'month') {
+        } elseif ($this->period === 'month' || $this->period === 'this_month') {
             $labels = [];
             $data = [];
             for ($i = 3; $i >= 0; $i--) {
@@ -142,10 +157,10 @@ class Dashboard extends BaseDashboard
             }
             return ['labels' => $labels, 'data' => $data];
         } else {
-            // 3 months
+            // this_year, year, or all_time
             $labels = [];
             $data = [];
-            for ($i = 2; $i >= 0; $i--) {
+            for ($i = 5; $i >= 0; $i--) {
                 $m = $now->copy()->subMonths($i);
                 $labels[] = $m->format('M Y');
                 $sum = (clone $query)->whereMonth('created_at', $m->month)->whereYear('created_at', $m->year)->sum('total_amount');
@@ -164,6 +179,7 @@ class Dashboard extends BaseDashboard
         if ($this->selectedMonitoringOutletId) {
             $query->where('orders.outlet_id', $this->selectedMonitoringOutletId);
         }
+        $this->applyPeriodFilter($query, 'orders.created_at');
 
         $items = $query->select('products.name as product_name', DB::raw('SUM(order_items.quantity) as total_qty'))
             ->groupBy('products.name')
@@ -173,8 +189,8 @@ class Dashboard extends BaseDashboard
 
         if ($items->isEmpty()) {
             return [
-                'labels' => ['Kotak Pensil Kaleng', 'Acuan 110', 'Acuan 139', 'Acuan 143', 'Board Master'],
-                'data' => [15, 12, 10, 8, 5],
+                'labels' => ['Toples Hadara', 'Plastik Parsel', 'Tape Cutter', 'Pen Hapus', 'Benang Biasa'],
+                'data' => [0, 0, 0, 0, 0],
             ];
         }
 
@@ -197,6 +213,7 @@ class Dashboard extends BaseDashboard
         if ($this->selectedMonitoringOutletId) {
             $query->where('orders.outlet_id', $this->selectedMonitoringOutletId);
         }
+        $this->applyPeriodFilter($query, 'orders.created_at');
 
         $items = $query->select(
             'products.name as product_name',
@@ -210,10 +227,10 @@ class Dashboard extends BaseDashboard
 
         if ($items->isEmpty()) {
             return [
-                'labels' => ['Kotak Pensil Kaleng', 'Acuan 110', 'Lainnya'],
-                'data' => [50, 30, 20],
-                'percentages' => ['50%', '30%', '20%'],
-                'counts' => ['5', '3', '2'],
+                'labels' => ['Belum Ada Data'],
+                'data' => [1],
+                'percentages' => ['0%'],
+                'counts' => ['0'],
             ];
         }
 

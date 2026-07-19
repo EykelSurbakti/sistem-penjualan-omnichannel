@@ -171,7 +171,7 @@
                             <div class="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-blue-600 border-2 border-white dark:border-gray-900"></div>
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                 <p class="text-xs font-extrabold text-gray-900 dark:text-white">
-                                    App: {{ $outlet->name ?? 'MALIKU STORE 03' }} • Sejumlah Rp {{ number_format($order->total_amount, 0, ',', '.') }} pembayaran pada Tunai diproses oleh {{ $cashier->name ?? 'Kasir' }}
+                                    App: {{ $outlet->name ?? 'Muliku Store' }} • Sejumlah Rp {{ number_format($order->total_amount, 0, ',', '.') }} pembayaran pada Tunai diproses oleh {{ $cashier->name ?? 'Kasir' }}
                                 </p>
                                 <span class="text-[11px] font-bold text-gray-400">{{ $order->created_at->format('h:i A') }}</span>
                             </div>
@@ -236,7 +236,7 @@
                         <x-heroicon-m-map-pin class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div>
                             <p class="text-xs font-bold text-gray-900 dark:text-white">
-                                {{ $outlet->name ?? 'MALIKU STORE 03' }}
+                                {{ $outlet->name ?? 'Muliku Store' }}
                             </p>
                             <p class="text-[11px] text-gray-500 mt-0.5">Air Hitam, Lampung Barat</p>
                         </div>
@@ -282,8 +282,8 @@
                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Preview Struk Pesanan {{ $order->order_number }}</h3>
                 <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-950 font-mono text-xs text-left space-y-2 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <div class="text-center font-bold pb-2 border-b border-dashed border-gray-300 dark:border-gray-700">
-                        <p class="text-sm">MALIKU COMMERCE</p>
-                        <p class="text-[10px] text-gray-500">{{ $outlet->name ?? 'MALIKU STORE 03' }}</p>
+                        <p class="text-sm">MULIKU COMMERCE</p>
+                        <p class="text-[10px] text-gray-500">{{ $outlet->name ?? 'Muliku Store' }}</p>
                     </div>
                     <div class="flex justify-between">
                         <span>No: {{ $order->order_number }}</span>

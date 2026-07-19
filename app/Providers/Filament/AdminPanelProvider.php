@@ -78,9 +78,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([])
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('5s')
             ->renderHook(
                 \Filament\View\PanelsRenderHook::BODY_END,
                 fn () => \Illuminate\Support\Facades\Blade::render('
+                    @include("filament.components.admin-realtime-notifications")
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
                             if (window.innerWidth < 1024) {

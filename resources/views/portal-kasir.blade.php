@@ -179,7 +179,7 @@
 
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; font-weight: 800;">
-                <span>🏪 {{ auth()->user()->outlet->name ?? 'MALIKU STORE 03' }}</span>
+                <span>🏪 {{ auth()->user()->outlet->name ?? 'Muliku Store' }}</span>
             </div>
 
             <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; font-weight: 800;">
@@ -187,12 +187,18 @@
                 <span>{{ $activeShift->cashier_name ?? auth()->user()->name ?? 'Kasir' }}</span>
             </div>
 
-            <form method="POST" action="{{ route('filament.admin.auth.logout') }}" style="margin: 0;">
-                @csrf
-                <button type="submit" style="padding: 7px 14px; border-radius: 8px; background: #EF4444; color: #ffffff; border: none; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.2s;">
-                    Keluar
+            @if($activeShift)
+                <button type="button" onclick="alertCannotLogoutOpenShift()" style="padding: 7px 14px; border-radius: 8px; background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.2s;">
+                    🔒 Keluar
                 </button>
-            </form>
+            @else
+                <form method="POST" action="{{ route('filament.admin.auth.logout') }}" style="margin: 0;">
+                    @csrf
+                    <button type="submit" style="padding: 7px 14px; border-radius: 8px; background: #EF4444; color: #ffffff; border: none; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.2s;">
+                        Keluar
+                    </button>
+                </form>
+            @endif
         </div>
     </header>
 
@@ -366,7 +372,7 @@
                     <div>
                         <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Cabang Toko Bertugas</span>
                         <h4 style="font-size: 14px; font-weight: 900; color: #0F172A; margin-top: 2px;">
-                            {{ auth()->user()->outlet->name ?? 'MALIKU STORE 03' }}
+                            {{ auth()->user()->outlet->name ?? 'Muliku Store' }}
                         </h4>
                         <span style="font-size: 11px; color: #0284C7; font-weight: 600;">Aktif Terhubung Cabang</span>
                     </div>
@@ -487,13 +493,23 @@
                             Batal
                         </button>
                     @else
-                        <button
-                            type="button"
-                            onclick="document.getElementById('logoutFormModal').submit()"
-                            style="flex: 1; padding: 12px; border-radius: 10px; background: #FFF1F2; color: #E11D48; font-size: 13px; font-weight: 800; border: 1px solid #FECDD3; cursor: pointer;"
-                        >
-                            Keluar dari Akun
-                        </button>
+                        @if($activeShift)
+                            <button
+                                type="button"
+                                onclick="alertCannotLogoutOpenShift()"
+                                style="flex: 1; padding: 12px; border-radius: 10px; background: #FFF1F2; color: #E11D48; font-size: 13px; font-weight: 800; border: 1px solid #FECDD3; cursor: pointer;"
+                            >
+                                Keluar dari Akun
+                            </button>
+                        @else
+                            <button
+                                type="button"
+                                onclick="document.getElementById('logoutFormModal').submit()"
+                                style="flex: 1; padding: 12px; border-radius: 10px; background: #FFF1F2; color: #E11D48; font-size: 13px; font-weight: 800; border: 1px solid #FECDD3; cursor: pointer;"
+                            >
+                                Keluar dari Akun
+                            </button>
+                        @endif
                     @endif
                     <button
                         type="submit"
@@ -524,7 +540,24 @@
 
             <div style="padding: 22px;">
                 @if($activeShift)
-                    <div style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 14px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    @php
+                        $shiftSales = 0;
+                        $shiftOrdersCount = 0;
+                        $ordersQuery = \App\Models\Order::where('payment_status', 'paid')
+                            ->where('created_at', '>=', $activeShift->opened_at);
+                            
+                        if ($activeShift->outlet_id) {
+                            $ordersQuery->where('outlet_id', $activeShift->outlet_id);
+                        } else {
+                            $ordersQuery->where('cashier_id', auth()->id());
+                        }
+                        
+                        $shiftSales = (clone $ordersQuery)->sum('total_amount');
+                        $shiftOrdersCount = (clone $ordersQuery)->count();
+                        $expectedClosingCash = ($activeShift->initial_cash ?? 0) + $shiftSales;
+                    @endphp
+
+                    <div style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 14px; padding: 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                                 <span style="font-weight: 900; font-size: 15px; color: #0F172A;">Hari Ini ({{ $tanggalIndo }})</span>
@@ -538,19 +571,46 @@
                         </div>
                     </div>
 
+                    {{-- BOX KOTAK RINCIAN OTOMATIS SISTEM --}}
+                    <div style="background: #EFF6FF; border: 1.5px dashed #3B82F6; border-radius: 14px; padding: 16px; margin-bottom: 18px;">
+                        <div style="font-size: 11px; font-weight: 900; color: #1E40AF; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>📊 Pembacaan Otomatis Sistem (Shift Ini)</span>
+                            <span style="background: #DBEAFE; color: #1D4ED8; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800;">{{ $shiftOrdersCount }} Pesanan Terjual</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #334155; margin-bottom: 6px;">
+                            <span>💵 Modal Awal Laci:</span>
+                            <span style="font-weight: 800;">Rp {{ number_format($activeShift->initial_cash, 0, ',', '.') }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #16A34A; margin-bottom: 10px;">
+                            <span>🛍️ Total Penjualan Shift Ini:</span>
+                            <span style="font-weight: 900;">+ Rp {{ number_format($shiftSales, 0, ',', '.') }}</span>
+                        </div>
+                        <div style="border-top: 1px solid #BFDBFE; padding-top: 10px; display: flex; justify-content: space-between; font-size: 14px; color: #1E3A8A;">
+                            <span style="font-weight: 800;">Estimasi Total Uang Fisik Laci:</span>
+                            <span style="font-weight: 900; font-size: 16px; color: #1D4ED8;">Rp {{ number_format($expectedClosingCash, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+
                     <form method="POST" action="{{ route('tutup-shift') }}" style="display: flex; flex-direction: column; gap: 14px;">
                         @csrf
                         <div>
                             <label style="font-size: 12px; font-weight: 800; color: #334155; display: block; margin-bottom: 6px;">
-                                Uang Akhir Saat Tutup Kasir (Rp)
+                                Uang Akhir Saat Tutup Kasir (Rp) <span style="color: #2563EB; font-weight: 700;">(Diisi Otomatis oleh Sistem)</span>
                             </label>
                             <input
                                 type="number"
+                                id="inputClosingCash"
                                 name="closing_cash"
-                                value="{{ $activeShift->initial_cash }}"
+                                value="{{ (int) $expectedClosingCash }}"
                                 required
-                                style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 2px solid #CBD5E1; font-size: 16px; font-weight: 800; color: #0F172A; outline: none;"
+                                style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 2px solid #3B82F6; background: #FAFAFA; font-size: 16px; font-weight: 800; color: #0F172A; outline: none;"
                             />
+                            <div
+                                onclick="document.getElementById('inputClosingCash').value = {{ (int) $expectedClosingCash }}"
+                                style="font-size: 11px; color: #2563EB; margin-top: 6px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            >
+                                ⚡ Klik di sini jika ingin mengembalikan ke nilai otomatis sistem (Rp {{ number_format($expectedClosingCash, 0, ',', '.') }})
+                            </div>
                         </div>
                         <button
                             type="submit"
@@ -577,6 +637,72 @@
         </div>
     </div>
 
+    {{-- MODAL EXECUTIVE 1: BLOKIR KELUAR AKUN SEBELUM TUTUP SHIFT --}}
+    <div id="modalBlockedLogout" class="modal-overlay" style="z-index: 100000;">
+        <div class="modal-box" style="max-width: 480px; text-align: center; border: 2px solid #FECDD3; overflow: hidden; padding: 0;">
+            <div style="background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%); padding: 28px 22px; color: #ffffff;">
+                <div style="font-size: 48px; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">🛡️</div>
+                <span style="font-size: 10px; font-weight: 900; text-transform: uppercase; background: rgba(255,255,255,0.22); padding: 3px 10px; border-radius: 6px; letter-spacing: 0.6px;">
+                    KEAMANAN SHIFT KASIR AKTIF
+                </span>
+                <h3 style="font-size: 21px; font-weight: 900; margin: 12px 0 4px 0;">Tidak Dapat Keluar dari Akun!</h3>
+                <p style="font-size: 13px; opacity: 0.95; margin: 0; line-height: 1.4;">
+                    Shift Kasir atas nama <strong style="color: #FFE4E6; text-decoration: underline;">{{ $activeShift->cashier_name ?? auth()->user()->name ?? 'Kasir' }}</strong> saat ini masih <strong>TERBUKA</strong>.
+                </p>
+            </div>
+
+            <div style="padding: 22px 24px; text-align: left; background: #FFF1F2; border-bottom: 1px solid #FFE4E6;">
+                <p style="font-size: 13px; font-weight: 800; color: #881337; margin: 0 0 10px 0; display: flex; align-items: center; gap: 6px;">
+                    <span>⚠️</span> Mengapa Anda harus menutup shift terlebih dahulu?
+                </p>
+                <ul style="font-size: 12.5px; color: #9F1239; margin: 0; padding-left: 18px; line-height: 1.6;">
+                    <li><strong>Rekap Uang Laci Kasir:</strong> Memastikan uang tunai fisik di laci cocok dengan total transaksi sistem.</li>
+                    <li><strong>Mencegah Selisih Kas:</strong> Menghindari kebingungan saldo saat pergantian shift kasir berikutnya.</li>
+                    <li><strong>Laporan Otomatis:</strong> Seluruh catatan penjualan shift Anda akan tersimpan resmi di Riwayat Shift.</li>
+                </ul>
+            </div>
+
+            <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; background: #ffffff;">
+                <button
+                    type="button"
+                    onclick="closeBlockedLogoutModal(); openRiwayatShiftModal();"
+                    style="width: 100%; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%); color: #ffffff; font-size: 13.5px; font-weight: 900; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(21, 101, 192, 0.35); transition: 0.2s;"
+                >
+                    📋 Buka Menu Tutup Shift & Rekap Kasir Sekarang
+                </button>
+                <button
+                    type="button"
+                    onclick="closeBlockedLogoutModal()"
+                    style="width: 100%; padding: 12px; border-radius: 10px; background: #F1F5F9; color: #475569; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s;"
+                >
+                    Kembali ke Portal Kasir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- MODAL EXECUTIVE 2: WAJIB BUKA SHIFT SEBELUM AKSES --}}
+    <div id="modalRequiredShift" class="modal-overlay" style="z-index: 100000;">
+        <div class="modal-box" style="max-width: 440px; text-align: center; border: 2px solid #FDE68A; overflow: hidden; padding: 0;">
+            <div style="background: linear-gradient(135deg, #D97706 0%, #B45309 100%); padding: 26px 22px; color: #ffffff;">
+                <div style="font-size: 46px; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">🔑</div>
+                <h3 style="font-size: 20px; font-weight: 900; margin: 0;">Buka Shift Kasir Diperlukan!</h3>
+                <p style="font-size: 13px; opacity: 0.95; margin-top: 6px; line-height: 1.4;">
+                    Anda wajib mengisi Nama Kasir dan Modal Awal Laci terlebih dahulu sebelum dapat menggunakan menu transaksi.
+                </p>
+            </div>
+            <div style="padding: 22px; background: #ffffff;">
+                <button
+                    type="button"
+                    onclick="document.getElementById('modalRequiredShift').style.display='none'; openShiftModal();"
+                    style="width: 100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%); color: #ffffff; font-size: 13.5px; font-weight: 900; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);"
+                >
+                    Mengerti & Isi Modal Awal Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- FOOTER SERAGAM --}}
     <footer style="padding: 14px; text-align: center; font-size: 11px; color: #64748B; border-top: 1px solid #E2E8F0; background: #ffffff;">
         &copy; {{ date('Y') }} MULIKU STORE &bull; Sistem Kasir Toko & Pengelolaan Barang
@@ -597,7 +723,7 @@
         }
         function closeShiftModal() {
             @if(!$activeShift || request('auto_open_shift') == '1')
-                alert('⚠️ Anda wajib mengisi Nama Kasir dan Modal Awal untuk membuka shift terlebih dahulu sebelum dapat menggunakan menu sistem!');
+                document.getElementById('modalRequiredShift').style.display = 'flex';
                 return;
             @endif
             document.getElementById('modalBukaShift').style.display = 'none';
@@ -613,9 +739,28 @@
             document.getElementById('modalRiwayatShift').style.display = 'none';
         }
 
+        function alertCannotLogoutOpenShift() {
+            document.getElementById('modalBlockedLogout').style.display = 'flex';
+        }
+        function closeBlockedLogoutModal() {
+            document.getElementById('modalBlockedLogout').style.display = 'none';
+        }
+
         @if(request('auto_open_shift') == '1' || !$activeShift)
             document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(openShiftModal, 250);
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            });
+        @endif
+
+        @if(request('blocked_logout') == '1' || session('error'))
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(alertCannotLogoutOpenShift, 300);
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
             });
         @endif
     </script>

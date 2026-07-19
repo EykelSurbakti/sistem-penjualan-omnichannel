@@ -53,11 +53,11 @@ class TopProductSalesChart extends ChartWidget
                 'datasets' => [
                     [
                         'label' => 'Kontribusi (%)',
-                        'data' => [50, 30, 20],
-                        'backgroundColor' => ['#2563EB', '#F59E0B', '#10B981'],
+                        'data' => [1],
+                        'backgroundColor' => ['#94A3B8'],
                     ],
                 ],
-                'labels' => ['Kotak Pensil Kaleng', 'Acuan Silikon 110', 'Lainnya'],
+                'labels' => ['Belum Ada Data'],
             ];
         }
 
