@@ -35,6 +35,41 @@
                 border-top: 2px solid #CBD5E1 !important;
             }
         }
+        /* PENGATURAN CETAK STRUK THERMAL 58MM KHUSUS PRINTER IWARE C58BT / BLUETOOTH / USB */
+        @media print {
+            /* Gunakan visibility (BUKAN display:none) agar nested child tetap bisa terlihat */
+            body * {
+                visibility: hidden !important;
+            }
+            /* Tampilkan struk dan semua isinya */
+            #thermal-receipt,
+            #thermal-receipt * {
+                visibility: visible !important;
+            }
+            /* Posisikan struk di pojok kiri atas kertas 58mm */
+            #thermal-receipt {
+                display: block !important;
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 58mm !important;
+                max-width: 58mm !important;
+                margin: 0 !important;
+                padding: 3mm 4mm 6mm 4mm !important;
+                box-sizing: border-box !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                font-size: 11px !important;
+                line-height: 1.4 !important;
+                color: #000000 !important;
+                background: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            @page {
+                size: 58mm auto;
+                margin: 0mm;
+            }
+        }
     </style>
 
     {{-- LAYOUT UTAMA KASIR: POSITION FIXED FULL VIEWPORT DENGAN 100dvh AGAR PAS DI TAB ADVAN A8 (TIDAK TERPOTONG NAV BAR ANDROID) --}}
@@ -313,6 +348,185 @@
 
         </div>
 
+        {{-- STRUK THERMAL 58MM — IWARE C58BT (tersembunyi di layar, hanya muncul saat print) --}}
+        @if($lastOrderSummary)
+            @php
+                $rcptNumber = preg_replace('/[^0-9]/', '', $lastOrderSummary['order_number'] ?? '817559');
+                if(empty($rcptNumber)) $rcptNumber = '817559';
+            @endphp
+            <div id="thermal-receipt" style="display:none; width:58mm; max-width:58mm; padding:3mm 4mm 6mm 4mm; box-sizing:border-box; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.4; color:#000; background:#fff;">
+
+                {{-- ① HEADER --}}
+                <div style="text-align:center; margin-bottom:10px;">
+                    <div style="font-size:13px; font-weight:bold;">Muliku Plastik store</div>
+                    <div style="font-size:12px; font-weight:bold; margin-top:1px;">{{ strtoupper($lastOrderSummary['outlet_name'] ?? 'MULIKU STORE 02') }}</div>
+                    <div style="font-size:10px; margin-top:5px; line-height:1.5;">
+                        Jalan raya bungin pekon purawiwi<br>
+                        tan kecamatan kebun tebu<br>
+                        Indonesia, Lampung<br>
+                        Lampung Barat<br>
+                        081278295297
+                    </div>
+                    <div style="margin-top:8px; font-size:11px;">Receipt No. {{ $lastOrderSummary['order_number'] ?? '-' }}</div>
+                </div>
+
+                {{-- ② DATE & CASHIER (rata kiri, kolom label lebar tetap) --}}
+                <table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;">
+                    <tr>
+                        <td style="width:70px; vertical-align:top; padding:1px 0;">Order Date</td>
+                        <td style="vertical-align:top; padding:1px 0;">{{ $lastOrderSummary['date'] ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:1px 0;">Cashier</td>
+                        <td style="vertical-align:top; padding:1px 0; word-break:break-word;">{{ $lastOrderSummary['cashier_name'] ?? '-' }}</td>
+                    </tr>
+                </table>
+
+                {{-- ③ DAFTAR BARANG --}}
+                <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:8px 0;">
+                    @php $totalItems = 0; @endphp
+                    @if(!empty($lastOrderSummary['items']))
+                        @foreach($lastOrderSummary['items'] as $item)
+                            @php
+                                $qty   = (int)($item['quantity'] ?? 1);
+                                $price = (float)($item['price'] ?? 0);
+                                $totalItems += $qty;
+                                $itemTotal = number_format($price * $qty, 0, ',', '.');
+                                // Potong nama agar muat di kolom 58mm (maks ~18 karakter agar harga tidak terdorong)
+                                $rawName = strtoupper($item['name'] ?? 'ITEM');
+                                $maxLen = 20;
+                                $displayName = $qty . ' ' . (mb_strlen($rawName) > $maxLen ? mb_substr($rawName, 0, $maxLen) : $rawName);
+                            @endphp
+                            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;">
+                                <span style="flex:1; padding-right:4px; word-break:break-word;">{{ $displayName }}</span>
+                                <span style="white-space:nowrap; flex-shrink:0;">{{ $itemTotal }}</span>
+                            </div>
+                            @if($qty > 1)
+                                <div style="font-size:10px; padding-left:12px; margin-bottom:3px;">@ {{ number_format($price, 0, ',', '.') }}</div>
+                            @endif
+                        @endforeach
+                    @endif
+                </div>
+                <div style="margin-bottom:8px; font-size:11px;">{{ $totalItems }} Items</div>
+
+                {{-- ④ SUBTOTAL / TOTAL (tanpa garis, dua baris rapat) --}}
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <tr>
+                        <td style="padding:1px 0;">Subtotal</td>
+                        <td style="text-align:right; padding:1px 0;">{{ number_format($lastOrderSummary['total_amount'] ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:1px 0;">TOTAL</td>
+                        <td style="text-align:right; padding:1px 0;">{{ number_format($lastOrderSummary['total_amount'] ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                </table>
+
+                {{-- ⑤ CASH & CHANGE DUE (spasi di atas agar seperti foto) --}}
+                <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:12px;">
+                    <tr>
+                        <td style="padding:1px 0;">Cash</td>
+                        <td style="text-align:right; padding:1px 0;">{{ number_format($lastOrderSummary['cash_received'] ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:12px;">
+                    <tr>
+                        <td style="padding:1px 0;">Change Due</td>
+                        <td style="text-align:right; padding:1px 0;">{{ number_format($lastOrderSummary['change_amount'] ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                </table>
+
+                {{-- ⑦ FOOTER: Instagram logo + Thanks --}}
+                <div style="text-align:center; margin-top:14px; font-size:11px;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                        {{-- Logo Instagram (SVG inline) --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; flex-shrink:0;">
+                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                        </svg>
+                        <span>@mulikustore</span>
+                    </div>
+                    <div style="margin-top:10px;">Thanks for shopping</div>
+                </div>
+
+                {{-- ⑧ BARCODE (via JsBarcode SVG, presisi di tengah) --}}
+                <div style="text-align:center; margin-top:12px; width:100%;">
+                    <div style="display:flex; justify-content:center; width:100%;">
+                        <svg id="thermal-barcode-svg" data-barcode="{{ $rcptNumber }}"
+                             style="display:block; max-width:100%; height:auto;"></svg>
+                    </div>
+                    <div style="font-size:11px; text-align:center; margin-top:3px; letter-spacing:1px;">{{ $rcptNumber }}</div>
+                </div>
+
+            </div>
+
+        @assets
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+        @endassets
+
+        @script
+        <script>
+            window.printThermal = function() {
+                var receipt    = document.getElementById('thermal-receipt');
+                var svgEl      = document.getElementById('thermal-barcode-svg');
+                var barcodeVal = svgEl ? svgEl.getAttribute('data-barcode') : '';
+
+                // 1. Posisikan receipt JAUH di luar layar untuk render barcode
+                //    (tidak pernah kelihatan user — hanya agar browser bisa hitung ukuran SVG)
+                if (receipt) {
+                    receipt.style.display    = 'block';
+                    receipt.style.position   = 'fixed';
+                    receipt.style.top        = '-99999px';  // jauh di luar viewport
+                    receipt.style.left       = '-99999px';
+                    receipt.style.visibility = 'hidden';    // benar-benar tidak kelihatan
+                    receipt.style.zIndex     = '-1';
+                }
+
+                // 2. Render barcode ke SVG (browser bisa render karena element sudah di-display:block)
+                if (svgEl && barcodeVal && typeof JsBarcode !== 'undefined') {
+                    try {
+                        JsBarcode(svgEl, barcodeVal, {
+                            format:       'CODE128',
+                            width:        2.2,
+                            height:       52,
+                            displayValue: false,
+                            margin:       4,
+                            marginTop:    4,
+                            marginBottom: 4,
+                            marginLeft:   4,
+                            marginRight:  4,
+                            background:   '#ffffff',
+                            lineColor:    '#000000'
+                        });
+                        svgEl.style.display = 'block';
+                        svgEl.style.margin  = '0 auto';
+                    } catch(e) { console.error('JsBarcode error:', e); }
+                }
+
+                // 3. Setelah barcode render (beri 300ms), panggil print
+                //    CSS @media print yang akan mengatur #thermal-receipt agar terlihat & di posisi benar
+                //    JS tidak perlu set visibility/position — cukup panggil window.print()
+                setTimeout(function() {
+                    window.print();
+                }, 300);
+            };
+
+            // Setelah print selesai / dialog ditutup: reset receipt ke hidden
+            window.addEventListener('afterprint', function() {
+                var el = document.getElementById('thermal-receipt');
+                if (el) {
+                    el.style.display    = 'none';
+                    el.style.position   = '';
+                    el.style.top        = '';
+                    el.style.left       = '';
+                    el.style.visibility = '';
+                    el.style.zIndex     = '';
+                }
+            });
+        </script>
+        @endscript
+        @endif
+
         {{-- MODAL STRUK SUKSES --}}
         @if($showSuccessModal && $lastOrderSummary)
             <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;">
@@ -336,13 +550,18 @@
                             <span style="color: #059669;">Rp {{ number_format($lastOrderSummary['change_amount'] ?? $lastOrderSummary['change_due'] ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
-                    <div style="padding: 14px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; gap: 8px;">
-                        <button wire:click="closeSuccessModal" style="flex: 1; padding: 10px; border-radius: 8px; background: #E2E8F0; border: none; font-weight: 800; font-size: 11px; cursor: pointer;">
-                            TRANSAKSI BARU
+                    <div style="padding: 14px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 8px;">
+                        <button onclick="window.printThermal()" style="width: 100%; padding: 12px; border-radius: 8px; background: #059669; color: #ffffff; border: none; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
+                            <span>🖨️ CETAK STRUK THERMAL (58MM)</span>
                         </button>
-                        <a href="{{ url('/admin/orders') }}" style="flex: 1; padding: 10px; border-radius: 8px; background: #1976D2; color: #ffffff; text-decoration: none; text-align: center; font-weight: 800; font-size: 11px; cursor: pointer;">
-                            LIHAT RIWAYAT
-                        </a>
+                        <div style="display: flex; gap: 8px;">
+                            <button wire:click="closeSuccessModal" style="flex: 1; padding: 10px; border-radius: 8px; background: #E2E8F0; border: none; font-weight: 800; font-size: 11px; cursor: pointer;">
+                                TRANSAKSI BARU
+                            </button>
+                            <a href="{{ url('/admin/orders') }}" style="flex: 1; padding: 10px; border-radius: 8px; background: #1976D2; color: #ffffff; text-decoration: none; text-align: center; font-weight: 800; font-size: 11px; cursor: pointer;">
+                                LIHAT RIWAYAT
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
