@@ -15,10 +15,30 @@
             background: #cbd5e1;
             border-radius: 9999px;
         }
+        /* Penyesuaian Otomatis (Auto-Adjust) untuk Tab Advan A8 dan Tablet Android */
+        @media (max-width: 900px) {
+            .pos-cart-aside {
+                width: 320px !important;
+                max-width: 44vw !important;
+            }
+        }
+        @media (max-width: 650px) {
+            /* Jika tablet diputar potret (vertikal) atau di HP */
+            .pos-main-flex {
+                flex-direction: column !important;
+            }
+            .pos-cart-aside {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 46vh !important;
+                border-left: none !important;
+                border-top: 2px solid #CBD5E1 !important;
+            }
+        }
     </style>
 
-    {{-- LAYOUT UTAMA KASIR: POSITION FIXED FULL VIEWPORT (100% DINAMIS DI SEMUA UKURAN TABLET/IPAD TANPA TERPOTONG) --}}
-    <div style="position: fixed; inset: 0; z-index: 40; width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #F1F5F9; color: #0F172A; font-family: sans-serif; user-select: none; overflow: hidden;">
+    {{-- LAYOUT UTAMA KASIR: POSITION FIXED FULL VIEWPORT DENGAN 100dvh AGAR PAS DI TAB ADVAN A8 (TIDAK TERPOTONG NAV BAR ANDROID) --}}
+    <div style="position: fixed; top: 0; bottom: 0; left: 0; right: 0; z-index: 40; width: 100vw; height: 100dvh; max-height: 100%; display: flex; flex-direction: column; background: #F1F5F9; color: #0F172A; font-family: sans-serif; user-select: none; overflow: hidden;">
         
         {{-- ========================================================
              1. NAVBAR SUPER COMPACT & SLEEK (48px)
@@ -58,7 +78,7 @@
         {{-- ========================================================
              2. AREA KERJA (FLEX 1 DENGAN OVERFLOW HIDDEN AGAR TIDAK TERPOTONG)
              ======================================================== --}}
-        <div style="flex: 1; display: flex; min-height: 0; overflow: hidden;">
+        <div class="pos-main-flex" style="flex: 1; display: flex; min-height: 0; overflow: hidden;">
             
             {{-- PANEL KIRI: KATALOG PRODUK --}}
             <main style="flex: 1; display: flex; flex-direction: column; background: #F8FAFC; border-right: 1px solid #CBD5E1; min-height: 0; min-width: 0;">
@@ -162,15 +182,15 @@
             {{-- ========================================================
                  PANEL KANAN: KERANJANG BELANJA (FLEX COLUMN DENGAN MIN-HEIGHT: 0 AGAR FOOTER TAK TERPOTONG)
                  ======================================================== --}}
-            <aside style="width: 300px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; background: #ffffff; box-shadow: -2px 0 8px rgba(0,0,0,0.05); z-index: 20;">
+            <aside class="pos-cart-aside" style="width: 325px; min-width: 280px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; background: #ffffff; box-shadow: -2px 0 8px rgba(0,0,0,0.05); z-index: 20;">
                 
                 {{-- Header Keranjang --}}
-                <div style="padding: 10px 12px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+                <div style="padding: 10px 14px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
                     <div>
                         <span style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: #1976D2; display: block;">
                             Keranjang Pembeli
                         </span>
-                        <h2 style="font-size: 12.5px; font-weight: 900; color: #0F172A; margin: 1px 0 0 0;">
+                        <h2 style="font-size: 13px; font-weight: 900; color: #0F172A; margin: 1px 0 0 0;">
                             Penjualan Langsung
                         </h2>
                     </div>
@@ -178,7 +198,7 @@
                     @if(count($cart) > 0)
                         <button
                             wire:click="$set('showClearCartModal', true)"
-                            style="padding: 5px 10px; border-radius: 6px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 10px; font-weight: 800; cursor: pointer; transition: 0.15s; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(220,38,38,0.08);"
+                            style="padding: 6px 12px; border-radius: 6px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.15s; display: flex; align-items: center; gap: 4px; min-height: 32px;"
                         >
                             🗑️ Kosongkan
                         </button>
@@ -186,40 +206,40 @@
                 </div>
 
                 {{-- Daftar Barang di Keranjang (BERGULIR MANDIRI) --}}
-                <div class="custom-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <div class="custom-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
                     @if(empty($cart))
                         <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #94A3B8; padding: 14px;">
-                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #EFF6FF; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 6px;">
+                            <div style="width: 44px; height: 44px; border-radius: 50%; background: #EFF6FF; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 6px;">
                                 🛒
                             </div>
-                            <h4 style="font-size: 12px; font-weight: 800; color: #334155; margin: 0;">Keranjang Masih Kosong</h4>
-                            <p style="font-size: 10.5px; color: #64748B; margin-top: 3px;">Klik produk di kiri untuk menambahkan.</p>
+                            <h4 style="font-size: 13px; font-weight: 800; color: #334155; margin: 0;">Keranjang Masih Kosong</h4>
+                            <p style="font-size: 11px; color: #64748B; margin-top: 3px;">Klik produk di kiri untuk menambahkan.</p>
                         </div>
                     @else
                         @foreach($cart as $id => $item)
-                            <div style="padding: 8px 10px; border-radius: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                                <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
-                                    <span style="width: 22px; height: 22px; border-radius: 6px; background: #1976D2; color: #ffffff; font-weight: 900; font-size: 10.5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <div style="padding: 10px 12px; border-radius: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                                    <span style="min-width: 26px; height: 26px; border-radius: 6px; background: #1976D2; color: #ffffff; font-weight: 900; font-size: 11.5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         {{ $item['quantity'] }}x
                                     </span>
                                     <div style="min-width: 0;">
-                                        <h5 style="font-size: 11.5px; font-weight: 800; color: #0F172A; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <h5 style="font-size: 12.5px; font-weight: 800; color: #0F172A; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                             {{ $item['name'] }}
                                         </h5>
-                                        <span style="font-size: 9.5px; color: #64748B; display: block;">
+                                        <span style="font-size: 10.5px; color: #64748B; display: block; font-weight: 600;">
                                             @ Rp {{ number_format($item['price'], 0, ',', '.') }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                    <span style="font-size: 11.5px; font-weight: 900; color: #0F172A;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                                    <span style="font-size: 12.5px; font-weight: 900; color: #0F172A;">
                                         Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}
                                     </span>
 
-                                    <div style="display: flex; gap: 3px;">
-                                        <button wire:click="updateQuantity({{ $id }}, -1)" style="width: 20px; height: 20px; border-radius: 4px; background: #E2E8F0; border: none; font-weight: 800; cursor: pointer; color: #334155; font-size: 11px;">-</button>
-                                        <button wire:click="updateQuantity({{ $id }}, 1)" style="width: 20px; height: 20px; border-radius: 4px; background: #E2E8F0; border: none; font-weight: 800; cursor: pointer; color: #334155; font-size: 11px;">+</button>
+                                    <div style="display: flex; gap: 4px;">
+                                        <button wire:click="updateQuantity({{ $id }}, -1)" style="width: 28px; height: 28px; border-radius: 6px; background: #E2E8F0; border: none; font-weight: 900; cursor: pointer; color: #334155; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.1s;">-</button>
+                                        <button wire:click="updateQuantity({{ $id }}, 1)" style="width: 28px; height: 28px; border-radius: 6px; background: #1E88E5; border: none; font-weight: 900; cursor: pointer; color: #ffffff; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.1s;">+</button>
                                     </div>
                                 </div>
                             </div>
@@ -227,21 +247,21 @@
                     @endif
                 </div>
 
-                {{-- FOOTER PEMBAYARAN: SELALU DI BAWAH & TIDAK PERNAH TERPOTONG --}}
-                <div style="padding: 10px 12px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+                {{-- FOOTER PEMBAYARAN: SELALU DI BAWAH & BERGULIR JIKA LAYAR TABLET PENDEK --}}
+                <div class="custom-scroll" style="padding: 12px 14px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; max-height: 48vh; overflow-y: auto;">
                     
                     {{-- Total Bar --}}
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 900; color: #0F172A;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: 900; color: #0F172A;">
                         <span>TOTAL BAYAR:</span>
-                        <span style="color: #1976D2; font-size: 15px;">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                        <span style="color: #1976D2; font-size: 17px;">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
                     </div>
 
                     @if(count($cart) > 0)
-                        {{-- Pilihan Uang Cepat --}}
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+                        {{-- Pilihan Uang Cepat (Touch Friendly) --}}
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                             <button
                                 wire:click="setQuickCash({{ $this->total }})"
-                                style="padding: 4px; border-radius: 6px; border: 1px solid #CBD5E1; font-size: 10px; font-weight: 800; cursor: pointer; {{ $cashReceived == $this->total ? 'background: #1976D2; color: #ffffff; border-color: #1976D2;' : 'background: #ffffff; color: #334155;' }}"
+                                style="padding: 8px 4px; min-height: 36px; border-radius: 8px; border: 1.5px solid #CBD5E1; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.15s; {{ $cashReceived == $this->total ? 'background: #1976D2; color: #ffffff; border-color: #1976D2;' : 'background: #ffffff; color: #334155;' }}"
                             >
                                 Pas
                             </button>
@@ -249,7 +269,7 @@
                                 @if($loop->index < 3)
                                     <button
                                         wire:click="setQuickCash({{ $suggestion }})"
-                                        style="padding: 4px; border-radius: 6px; border: 1px solid #CBD5E1; font-size: 10px; font-weight: 800; cursor: pointer; {{ $cashReceived == $suggestion ? 'background: #1976D2; color: #ffffff; border-color: #1976D2;' : 'background: #ffffff; color: #334155;' }}"
+                                        style="padding: 8px 4px; min-height: 36px; border-radius: 8px; border: 1.5px solid #CBD5E1; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.15s; {{ $cashReceived == $suggestion ? 'background: #1976D2; color: #ffffff; border-color: #1976D2;' : 'background: #ffffff; color: #334155;' }}"
                                     >
                                         {{ number_format($suggestion / 1000, 0) }}rb
                                     </button>
@@ -257,34 +277,34 @@
                             @endforeach
                         </div>
 
-                        {{-- Input Uang Tunai & Kembalian --}}
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        {{-- Input Uang Tunai & Kembalian (Large Touch Area) --}}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                             <div>
-                                <label style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: #64748B; display: block; margin-bottom: 2px;">Diterima (Rp)</label>
+                                <label style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748B; display: block; margin-bottom: 4px;">Diterima (Rp)</label>
                                 <input
                                     type="number"
                                     wire:model.live="cashReceived"
                                     placeholder="0"
-                                    style="width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid #CBD5E1; font-weight: 800; font-size: 12px;"
+                                    style="width: 100%; padding: 8px 10px; min-height: 40px; border-radius: 8px; border: 1.5px solid #CBD5E1; font-weight: 900; font-size: 14px; color: #0F172A; background: #ffffff; outline: none;"
                                 />
                             </div>
                             <div>
-                                <label style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: #64748B; display: block; margin-bottom: 2px;">Kembalian</label>
-                                <div style="padding: 5px 8px; border-radius: 6px; background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; font-weight: 900; font-size: 12px;">
+                                <label style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748B; display: block; margin-bottom: 4px;">Kembalian</label>
+                                <div style="padding: 8px 10px; min-height: 40px; border-radius: 8px; background: #ECFDF5; border: 1.5px solid #A7F3D0; color: #047857; font-weight: 900; font-size: 14px; display: flex; align-items: center;">
                                     Rp {{ number_format($this->changeDue, 0, ',', '.') }}
                                 </div>
                             </div>
                         </div>
                     @endif
 
-                    {{-- TOMBOL BAYAR SEKARANG --}}
+                    {{-- TOMBOL BAYAR SEKARANG (EXTRA RESPONSIF & MUDAH DISENTUH) --}}
                     <button
                         wire:click="processCashPayment"
                         @if(empty($cart)) disabled @endif
-                        style="width: 100%; padding: 10px 14px; border-radius: 8px; background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%); color: #ffffff; border: none; font-size: 12.5px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 3px 8px rgba(25,118,210,0.3); transition: 0.15s; {{ empty($cart) ? 'opacity: 0.55; cursor: not-allowed;' : '' }}"
+                        style="width: 100%; padding: 14px 16px; min-height: 48px; border-radius: 10px; background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%); color: #ffffff; border: none; font-size: 13.5px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(25,118,210,0.35); transition: 0.15s; {{ empty($cart) ? 'opacity: 0.55; cursor: not-allowed;' : '' }}"
                     >
                         <span>BAYAR SEKARANG</span>
-                        <span style="font-size: 13.5px;">Rp {{ number_format($this->total, 0, ',', '.') }} &rarr;</span>
+                        <span style="font-size: 15px;">Rp {{ number_format($this->total, 0, ',', '.') }} &rarr;</span>
                     </button>
 
                 </div>
