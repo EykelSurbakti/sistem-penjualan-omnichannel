@@ -341,6 +341,11 @@ class PosKasir extends Page
                 'payment_status' => 'paid',
                 'payment_method' => 'Tunai',
                 'fulfillment_status' => 'completed',
+                'notes' => json_encode([
+                    'cash_received' => $this->cashReceived,
+                    'change_amount' => $this->getChangeDueProperty(),
+                    'cashier_name' => $this->activeShift?->cashier_name ?? auth()->user()->name ?? 'Kasir',
+                ]),
             ]);
 
             // Create payment record
@@ -390,6 +395,7 @@ class PosKasir extends Page
 
             // Store summary for receipt modal
             $this->lastOrderSummary = [
+                'order_id' => $order->id,
                 'order_number' => $orderNumber,
                 'order_reference' => $orderNumber,
                 'date' => now()->format('d M Y, H:i'),

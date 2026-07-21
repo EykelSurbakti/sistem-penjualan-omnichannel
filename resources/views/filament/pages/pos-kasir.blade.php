@@ -392,8 +392,11 @@
                                 $price = (float)($item['price'] ?? 0);
                                 $totalItems += $qty;
                                 $itemTotal = number_format($price * $qty, 0, ',', '.');
-                                // Potong nama agar muat di kolom 58mm (maks ~18 karakter agar harga tidak terdorong)
-                                $rawName = strtoupper($item['name'] ?? 'ITEM');
+                                // Bersihkan karakter non-ASCII (seperti tanda petik melengkung ’ yang berubah jadi ┌ÇÖ di printer thermal)
+                                $search = ["\xE2\x80\x98", "\xE2\x80\x99", "\xE2\x80\x9A", "\xE2\x80\x9B", "\xE2\x80\x9C", "\xE2\x80\x9D", "\xE2\x80\x93", "\xE2\x80\x94"];
+                                $replace = ["'", "'", "'", "'", '"', '"', "-", "-"];
+                                $cleanName = preg_replace('/[^\x20-\x7E]/', '', str_replace($search, $replace, ($item['name'] ?? 'ITEM')));
+                                $rawName = strtoupper(trim($cleanName));
                                 $maxLen = 20;
                                 $displayName = $qty . ' ' . (mb_strlen($rawName) > $maxLen ? mb_substr($rawName, 0, $maxLen) : $rawName);
                             @endphp
@@ -551,9 +554,173 @@
                         </div>
                     </div>
                     <div style="padding: 14px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 8px;">
-                        <button onclick="window.printThermal()" style="width: 100%; padding: 12px; border-radius: 8px; background: #059669; color: #ffffff; border: none; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
-                            <span>🖨️ CETAK STRUK THERMAL (58MM)</span>
-                        </button>
+                        @if(isset($lastOrderSummary['order_id']) && $lastOrderSummary['order_id'])
+                            @php
+                                // Format 32-column exact receipt string directly in Blade for direct deep links
+                                $fClean = function ($text) {
+                                    if (!$text) return '';
+                                    $search = ["\xE2\x80\x98", "\xE2\x80\x99", "\xE2\x80\x9A", "\xE2\x80\x9B", "\xE2\x80\x9C", "\xE2\x80\x9D", "\xE2\x80\x93", "\xE2\x80\x94"];
+                                    $replace = ["'", "'", "'", "'", '"', '"', "-", "-"];
+                                    return preg_replace('/[^\x20-\x7E]/', '', str_replace($search, $replace, $text));
+                                };
+                                $fRow32 = function ($left, $right) {
+                                    $maxLeftLen = 32 - strlen($right) - 1;
+                                    if (strlen($left) > $maxLeftLen) $left = substr($left, 0, $maxLeftLen);
+                                    return $left . str_repeat(' ', max(1, 32 - strlen($left) - strlen($right))) . $right;
+                                };
+                                $fCenter32 = function ($text) {
+                                    $text = trim($text);
+                                    if (strlen($text) >= 32) return substr($text, 0, 32);
+                                    return str_repeat(' ', (int)floor((32 - strlen($text)) / 2)) . $text;
+                                };
+                                $fCashier32 = function ($name) {
+                                    $label = "Cashier      ";
+                                    $maxRight = 32 - strlen($label);
+                                    if (strlen($name) <= $maxRight) return $label . $name;
+                                    return $label . substr($name, 0, $maxRight) . "\n" . str_repeat(' ', strlen($label)) . substr($name, $maxRight, $maxRight);
+                                };
+
+                                $rLines = [];
+                                $rLines[] = $fCenter32("Muliku Plastik store");
+                                $rLines[] = $fCenter32(strtoupper($fClean($lastOrderSummary['outlet_name'] ?? 'MULIKU STORE 02')));
+                                $rLines[] = $fCenter32("Jalan raya bungin pekon purawiwi");
+                                $rLines[] = $fCenter32("tan kecamatan kebun tebu");
+                                $rLines[] = $fCenter32("Indonesia, Lampung");
+                                $rLines[] = $fCenter32("Lampung Barat");
+                                $rLines[] = $fCenter32("081278295297");
+                                $rLines[] = $fCenter32("Receipt No. " . ($lastOrderSummary['order_number'] ?? 'POS-000'));
+                                $rLines[] = " ";
+                                $rLines[] = $fRow32("Order Date", now()->format('d/m/Y H:i:s'));
+                                $rLines[] = $fCashier32($fClean($lastOrderSummary['cashier_name'] ?? 'Kasir'));
+                                $rLines[] = "--------------------------------";
+
+                                $tItems = 0;
+                                foreach (($lastOrderSummary['items'] ?? []) as $item) {
+                                    $q = (int)$item['quantity'];
+                                    $tItems += $q;
+                                    $pF = number_format($item['price'], 0, ',', '.');
+                                    $tF = number_format($item['price'] * $q, 0, ',', '.');
+                                    $n = strtoupper($fClean($item['name'] ?? 'ITEM'));
+                                    if ($q == 1) {
+                                        $rLines[] = $fRow32("1 " . $n, $tF);
+                                    } else {
+                                        $rLines[] = $fRow32($q . " " . $n, $tF);
+                                        $rLines[] = "  @ " . $pF;
+                                    }
+                                }
+                                $rLines[] = "--------------------------------";
+                                $rLines[] = $tItems . " Items";
+                                $rLines[] = $fRow32("Subtotal", number_format($lastOrderSummary['total_amount'] ?? 0, 0, ',', '.'));
+                                $rLines[] = $fRow32("TOTAL", number_format($lastOrderSummary['total_amount'] ?? 0, 0, ',', '.'));
+                                $rLines[] = " ";
+                                $rLines[] = $fRow32("Cash", number_format($lastOrderSummary['cash_received'] ?? 0, 0, ',', '.'));
+                                $rLines[] = $fRow32("Change Due", number_format($lastOrderSummary['change_amount'] ?? 0, 0, ',', '.'));
+                                $rLines[] = " ";
+                                $rLines[] = $fCenter32("IG: mulikustore");
+                                $rLines[] = $fCenter32("Thanks for shopping");
+
+                                $cleanOrderRef = preg_replace('/[^a-zA-Z0-9]/', '', ($lastOrderSummary['order_number'] ?? ''));
+                                $receiptString = implode("\n", $rLines) . "\n\n" . $fCenter32($cleanOrderRef) . "\n\n\n\n";
+                                $thermerUrl = url('/api/thermer-receipt/' . $lastOrderSummary['order_id']) . '?cash=' . ($lastOrderSummary['cash_received'] ?? 0) . '&change=' . ($lastOrderSummary['change_amount'] ?? $lastOrderSummary['change_due'] ?? 0) . '&cashier=' . urlencode($lastOrderSummary['cashier_name'] ?? '');
+                                $btprinterDirectLink = "btprinter://print?content=" . urlencode($receiptString);
+
+                                // Generator Gambar Raster Barcode (GS v 0) - 100% kompatibel di semua printer thermal IWARE C58BT
+                                $genBarcodeImage = function ($codeStr) {
+                                    if (!$codeStr) return '';
+                                    $c39 = [
+                                        '0'=>'000110100','1'=>'100100001','2'=>'001100001','3'=>'101100000','4'=>'000110001',
+                                        '5'=>'100110000','6'=>'001110000','7'=>'000100101','8'=>'100100100','9'=>'001100100',
+                                        'A'=>'100001001','B'=>'001001001','C'=>'101001000','D'=>'000011001','E'=>'100011000',
+                                        'F'=>'001011000','G'=>'000001101','H'=>'100001100','I'=>'001001100','J'=>'000011100',
+                                        'K'=>'100000011','L'=>'001000011','M'=>'101000010','N'=>'000010011','O'=>'100010010',
+                                        'P'=>'001010010','Q'=>'000000111','R'=>'100000110','S'=>'001000110','T'=>'000010110',
+                                        'U'=>'110000001','V'=>'011000001','W'=>'111000000','X'=>'010010001','Y'=>'110010000',
+                                        'Z'=>'011010000','-'=>'010000101','*'=>'001001011'
+                                    ];
+                                    $clean = strtoupper(preg_replace('/[^a-zA-Z0-9\-]/', '', $codeStr));
+                                    $full = '*' . $clean . '*';
+                                    $dots = '';
+                                    foreach (str_split($full) as $ch) {
+                                        $pat = $c39[$ch] ?? $c39['0'];
+                                        for ($i = 0; $i < 9; $i++) {
+                                            $isBar = ($i % 2 == 0);
+                                            $isWide = ($pat[$i] == '1');
+                                            $dots .= str_repeat($isBar ? '1' : '0', $isWide ? 3 : 1);
+                                        }
+                                        $dots .= '0'; // Inter-character gap
+                                    }
+                                    $pad = max(0, floor((384 - strlen($dots)) / 2));
+                                    $dots = str_repeat('0', $pad) . $dots;
+                                    while (strlen($dots) < 384) $dots .= '0';
+                                    $row = '';
+                                    for ($i = 0; $i < 384; $i += 8) {
+                                        $row .= chr(bindec(substr($dots, $i, 8)));
+                                    }
+                                    return "\x1D\x76\x30\x00\x30\x00\x3C\x00" . str_repeat($row, 60);
+                                };
+
+                                // Generator Gambar Raster (GS v 0) untuk Logo Instagram + @mulikustore (UKURAN BESAR / BOLD)
+                                $genIgHeader = function () {
+                                    if (!function_exists('imagecreate')) return "@mulikustore\n";
+                                    $im = imagecreate(384, 40);
+                                    imagecolorallocate($im, 255, 255, 255);
+                                    $black = imagecolorallocate($im, 0, 0, 0);
+
+                                    $temp = imagecreate(115, 18);
+                                    imagecolorallocate($temp, 255, 255, 255);
+                                    $tBlack = imagecolorallocate($temp, 0, 0, 0);
+                                    imagestring($temp, 5, 2, 1, "@mulikustore", $tBlack);
+
+                                    $textW = floor(112 * 1.8);
+                                    $textH = floor(16 * 1.8);
+                                    $igW = 28;
+                                    $gap = 10;
+                                    $totalW = $igW + $gap + $textW;
+                                    $startX = floor((384 - $totalW) / 2);
+                                    $startY = 6;
+
+                                    for ($t = 0; $t < 3; $t++) {
+                                        imagerectangle($im, $startX + $t, $startY + $t, $startX + $igW - 1 - $t, $startY + $igW - 1 - $t, $black);
+                                    }
+                                    for ($r = 12; $r <= 14; $r++) {
+                                        imagearc($im, $startX + 14, $startY + 14, $r, $r, 0, 360, $black);
+                                    }
+                                    imagefilledrectangle($im, $startX + 21, $startY + 6, $startX + 23, $startY + 8, $black);
+
+                                    imagecopyresized($im, $temp, $startX + $igW + $gap, $startY - 1, 0, 0, $textW, $textH, 112, 16);
+                                    imagedestroy($temp);
+
+                                    $rowBytes = '';
+                                    for ($y = 0; $y < 40; $y++) {
+                                        for ($x = 0; $x < 384; $x += 8) {
+                                            $byte = 0;
+                                            for ($b = 0; $b < 8; $b++) {
+                                                if ($x + $b < 384 && imagecolorat($im, $x + $b, $y) === $black) {
+                                                    $byte |= (1 << (7 - $b));
+                                                }
+                                            }
+                                            $rowBytes .= chr($byte);
+                                        }
+                                    }
+                                    imagedestroy($im);
+                                    return "\x1D\x76\x30\x00\x30\x00\x28\x00" . $rowBytes;
+                                };
+
+                                // Untuk RawBT: urutan sempurna -> [Gambar Logo IG + @mulikustore] -> Thanks for shopping -> [Gambar Barcode] -> Nomor Resi rapat di bawah barcode
+                                $topLines = implode("\n", array_slice($rLines, 0, count($rLines) - 2));
+                                $igRaster = $genIgHeader();
+                                $barcodeRaster = $genBarcodeImage($cleanOrderRef);
+                                $rawbtBinaryPayload = $topLines . "\n\n" . $igRaster . "\n" . $fCenter32("Thanks for shopping") . "\n\n" . $barcodeRaster . $fCenter32($cleanOrderRef) . "\n\n\n\n";
+                                $rawbtDirectLink = "rawbt:base64," . base64_encode($rawbtBinaryPayload);
+                            @endphp
+                            <a href="{{ $rawbtDirectLink }}" onclick="this.style.pointerEvents='none'; setTimeout(() => this.style.pointerEvents='auto', 3000);" style="width: 100%; padding: 14px; border-radius: 8px; background: #EA580C; color: #ffffff; text-decoration: none; font-weight: 900; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
+                                <span>🖨️ CETAK STRUK</span>
+                            </a>
+                        @else
+                            <button onclick="window.printThermal()" style="width: 100%; padding: 14px; border-radius: 8px; background: #EA580C; color: #ffffff; border: none; font-weight: 900; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
+                                <span>🖨️ CETAK STRUK</span>
+                            </button>
+                        @endif
                         <div style="display: flex; gap: 8px;">
                             <button wire:click="closeSuccessModal" style="flex: 1; padding: 10px; border-radius: 8px; background: #E2E8F0; border: none; font-weight: 800; font-size: 11px; cursor: pointer;">
                                 TRANSAKSI BARU
