@@ -488,7 +488,10 @@
                                         <p class="text-[11px] mt-1 font-medium" style="color: rgba(255, 255, 255, 0.85);">Sembunyikan sementara dari toko</p>
                                     </button>
 
-                                    {{-- Tombol 3: Hapus Permanen --}}
+                                    {{-- Tombol 3: Hapus dari Toko / Hapus Permanen --}}
+                                    @php
+                                        $activeScopeId = auth()->user()?->outlet_id ?: $this->bulkOutletId;
+                                    @endphp
                                     <button
                                         type="button"
                                         wire:click="confirmBulkAction('delete')"
@@ -497,9 +500,9 @@
                                     >
                                         <div class="flex items-center justify-center gap-2 font-bold text-sm">
                                             <x-heroicon-m-trash class="w-5 h-5 opacity-90" />
-                                            <span>Hapus Permanen</span>
+                                            <span>{{ $activeScopeId ? 'Hapus dari Cabang Ini' : 'Hapus Permanen' }}</span>
                                         </div>
-                                        <p class="text-[11px] mt-1 font-medium" style="color: rgba(255, 255, 255, 0.85);">Bersihkan produk dari database</p>
+                                        <p class="text-[11px] mt-1 font-medium" style="color: rgba(255, 255, 255, 0.85);">{{ $activeScopeId ? 'Lepas produk dari toko terpilih' : 'Bersihkan produk dari database' }}</p>
                                     </button>
 
                                 </div>

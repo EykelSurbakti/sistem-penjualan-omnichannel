@@ -483,13 +483,15 @@ class ListProducts extends ListRecords
             $storeBreakdown[$out->name] = ['count' => 0, 'qty' => 0];
         }
 
+        $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) ? auth()->user()->outlet_id : ($this->bulkOutletId ?: null);
+
         foreach ($products as $p) {
             if ($p->is_active) { $activeCount++; } else { $inactiveCount++; }
 
             $pTotalQty = 0;
             if ($p->inventories && count($p->inventories) > 0) {
                 foreach ($p->inventories as $inv) {
-                    if (auth()->check() && auth()->user()->outlet_id && $inv->outlet_id != auth()->user()->outlet_id) {
+                    if ($activeOutletScope && $inv->outlet_id != $activeOutletScope) {
                         continue;
                     }
                     $qty = (int) $inv->quantity;
@@ -503,7 +505,7 @@ class ListProducts extends ListRecords
                 }
             } else {
                 if ($p->outlet) {
-                    if (!auth()->check() || !auth()->user()->outlet_id || $p->outlet_id == auth()->user()->outlet_id) {
+                    if (!$activeOutletScope || $p->outlet_id == $activeOutletScope) {
                         $storeName = $p->outlet->name;
                         if (!isset($storeBreakdown[$storeName])) {
                             $storeBreakdown[$storeName] = ['count' => 0, 'qty' => 0];
@@ -548,21 +550,30 @@ class ListProducts extends ListRecords
         $storesCount = count($breakdown['stores']);
 
         if ($type === 'delete') {
-            $this->confirmTitle = "Hapus Permanen {$totalProd} Produk?";
-            $this->confirmMessage = "Anda akan menghapus {$totalProd} produk terpilih (dengan total stok {$totalPcs} pcs) secara permanen dari database. Tindakan ini tidak dapat dibatalkan.";
-            
-            if ($storesCount > 1) {
-                $details = [];
-                foreach ($breakdown['stores'] as $storeName => $info) {
-                    $details[] = "{$info['count']} dari toko {$storeName}";
-                }
-                $this->confirmSubMessage = "⚠️ Perincian lintas toko: " . implode(', ', $details) . ". Produk yang memiliki riwayat penjualan tidak akan terhapus demi keamanan laporan keuangan.";
+            $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) ? auth()->user()->outlet_id : ($this->bulkOutletId ?: null);
+            $activeOutletName = $activeOutletScope ? (\App\Models\Outlet::find($activeOutletScope)?->name ?? 'Cabang Terpilih') : null;
+
+            if ($activeOutletName) {
+                $this->confirmTitle = "Hapus {$totalProd} Produk dari {$activeOutletName}?";
+                $this->confirmMessage = "Anda akan menghapus/melepas {$totalProd} produk terpilih (stok {$totalPcs} pcs) dari daftar barang di cabang {$activeOutletName}.";
+                $this->confirmSubMessage = "🛡️ Proteksi Omnichannel: Jika produk ini juga terdaftar di cabang toko lain (misal: Muliku Plastik02), produk TIDAK akan hilang dari toko lain tersebut. Sistem hanya menghapus data & stok produk di cabang {$activeOutletName}.";
             } else {
-                $storeName = !empty($breakdown['stores']) ? array_key_first($breakdown['stores']) : 'Toko';
-                $this->confirmSubMessage = "⚠️ Catatan: Produk yang memiliki riwayat transaksi/penjualan di {$storeName} akan otomatis dilindungi sistem dan tidak akan terhapus.";
+                $this->confirmTitle = "Hapus Permanen {$totalProd} Produk?";
+                $this->confirmMessage = "Anda akan menghapus {$totalProd} produk terpilih (dengan total stok {$totalPcs} pcs) secara permanen dari database. Tindakan ini tidak dapat dibatalkan.";
+                
+                if ($storesCount > 1) {
+                    $details = [];
+                    foreach ($breakdown['stores'] as $storeName => $info) {
+                        $details[] = "{$info['count']} dari toko {$storeName}";
+                    }
+                    $this->confirmSubMessage = "⚠️ Perincian lintas toko: " . implode(', ', $details) . ". Produk yang memiliki riwayat penjualan tidak akan terhapus demi keamanan laporan keuangan.";
+                } else {
+                    $storeName = !empty($breakdown['stores']) ? array_key_first($breakdown['stores']) : 'Toko';
+                    $this->confirmSubMessage = "⚠️ Catatan: Produk yang memiliki riwayat transaksi/penjualan di {$storeName} akan otomatis dilindungi sistem dan tidak akan terhapus.";
+                }
             }
 
-            $this->confirmButtonText = 'Ya, Hapus Permanen';
+            $this->confirmButtonText = 'Ya, Hapus Sekarang';
             $this->confirmActionType = 'delete';
         } elseif ($type === 'activate') {
             $this->confirmTitle = "Aktifkan {$totalProd} Produk Terpilih?";
@@ -605,20 +616,36 @@ class ListProducts extends ListRecords
             return;
         }
 
+        $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) ? auth()->user()->outlet_id : ($this->bulkOutletId ?: null);
         $query = Product::whereIn('id', $this->bulkSelectedIds);
-        if (auth()->check() && auth()->user()->outlet_id) {
-            $userOutletId = auth()->user()->outlet_id;
-            $query->where(function ($q) use ($userOutletId) {
-                $q->where('outlet_id', $userOutletId)
-                  ->orWhereHas('inventories', fn($i) => $i->where('outlet_id', $userOutletId));
+        if ($activeOutletScope) {
+            $query->where(function ($q) use ($activeOutletScope) {
+                $q->where('outlet_id', $activeOutletScope)
+                  ->orWhereHas('inventories', fn($i) => $i->where('outlet_id', $activeOutletScope));
             });
         }
-        $products = $query->get();
+        $products = $query->with('inventories')->get();
         $deletedCount = 0;
         $blockedProducts = [];
 
         foreach ($products as $product) {
             try {
+                if ($activeOutletScope) {
+                    $hasOtherStores = \App\Models\Inventory::where('product_id', $product->id)
+                        ->where('outlet_id', '!=', $activeOutletScope)
+                        ->exists();
+                    if ($hasOtherStores || ($product->outlet_id && $product->outlet_id != $activeOutletScope)) {
+                        \App\Models\Inventory::where('product_id', $product->id)
+                            ->where('outlet_id', $activeOutletScope)
+                            ->delete();
+                        if ($product->outlet_id == $activeOutletScope) {
+                            $product->outlet_id = null;
+                            $product->save();
+                        }
+                        $deletedCount++;
+                        continue;
+                    }
+                }
                 $product->delete();
                 $deletedCount++;
             } catch (\Illuminate\Database\QueryException $e) {
@@ -630,9 +657,12 @@ class ListProducts extends ListRecords
         $this->bulkSelectAll = false;
 
         if ($deletedCount > 0) {
+            $msg = $activeOutletScope 
+                ? "Berhasil menghapus/melepas {$deletedCount} produk dari cabang " . (\App\Models\Outlet::find($activeOutletScope)?->name ?? 'Terpilih') . ". (Cabang toko lain yang memiliki produk ini tetap aman)."
+                : "Berhasil menghapus {$deletedCount} produk secara global dari katalog.";
             \Filament\Notifications\Notification::make()
                 ->title('Penghapusan Massal Selesai')
-                ->body("Berhasil menghapus {$deletedCount} produk dari katalog.")
+                ->body($msg)
                 ->success()
                 ->send();
         }

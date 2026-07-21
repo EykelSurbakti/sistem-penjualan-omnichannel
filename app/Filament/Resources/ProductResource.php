@@ -202,11 +202,78 @@ class ProductResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->label('Edit Cepat')
                     ->icon('heroicon-m-pencil-square'),
+                Tables\Actions\DeleteAction::make()
+                    ->label('Hapus')
+                    ->icon('heroicon-m-trash')
+                    ->action(function (Product $record, $livewire) {
+                        $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) 
+                            ? auth()->user()->outlet_id 
+                            : (isset($livewire->bulkOutletId) && $livewire->bulkOutletId ? $livewire->bulkOutletId : (isset($livewire->outletId) && $livewire->outletId ? $livewire->outletId : null));
+                        if ($activeOutletScope) {
+                            $hasOtherStores = \App\Models\Inventory::where('product_id', $record->id)
+                                ->where('outlet_id', '!=', $activeOutletScope)
+                                ->exists();
+                            if ($hasOtherStores || ($record->outlet_id && $record->outlet_id != $activeOutletScope)) {
+                                \App\Models\Inventory::where('product_id', $record->id)
+                                    ->where('outlet_id', $activeOutletScope)
+                                    ->delete();
+                                if ($record->outlet_id == $activeOutletScope) {
+                                    $record->outlet_id = null;
+                                    $record->save();
+                                }
+                                $outletName = \App\Models\Outlet::find($activeOutletScope)?->name ?? 'Toko Ini';
+                                \Filament\Notifications\Notification::make()
+                                    ->title("Barang Dilepas dari {$outletName}")
+                                    ->body("Barang \"{$record->name}\" dihapus dari {$outletName} (cabang toko lain yang memiliki barang ini tetap utuh & aman).")
+                                    ->success()
+                                    ->send();
+                                return;
+                            }
+                        }
+                        $record->delete();
+                        \Filament\Notifications\Notification::make()
+                            ->title('Barang Dihapus')
+                            ->body("Barang \"{$record->name}\" berhasil dihapus.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->label('Hapus Terpilih'),
+                        ->label('Hapus Terpilih')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, $livewire) {
+                            $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) 
+                                ? auth()->user()->outlet_id 
+                                : (isset($livewire->bulkOutletId) && $livewire->bulkOutletId ? $livewire->bulkOutletId : (isset($livewire->outletId) && $livewire->outletId ? $livewire->outletId : null));
+                            $deletedCount = 0;
+                            foreach ($records as $product) {
+                                if ($activeOutletScope) {
+                                    $hasOtherStores = \App\Models\Inventory::where('product_id', $product->id)
+                                        ->where('outlet_id', '!=', $activeOutletScope)
+                                        ->exists();
+                                    if ($hasOtherStores || ($product->outlet_id && $product->outlet_id != $activeOutletScope)) {
+                                        \App\Models\Inventory::where('product_id', $product->id)
+                                            ->where('outlet_id', $activeOutletScope)
+                                            ->delete();
+                                        if ($product->outlet_id == $activeOutletScope) {
+                                            $product->outlet_id = null;
+                                            $product->save();
+                                        }
+                                        $deletedCount++;
+                                        continue;
+                                    }
+                                }
+                                $product->delete();
+                                $deletedCount++;
+                            }
+                            $outletName = $activeOutletScope ? (\App\Models\Outlet::find($activeOutletScope)?->name ?? 'Cabang Terpilih') : 'Katalog Global';
+                            \Filament\Notifications\Notification::make()
+                                ->title('Penghapusan Berhasil')
+                                ->body("Sebanyak {$deletedCount} produk telah dihapus/dilepas dari {$outletName}.")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ])
             ->emptyStateHeading('Belum Ada Barang Terdaftar')
