@@ -68,19 +68,21 @@ class ActivityLogResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Waktu Aktivitas')
-                    ->dateTime('d/m/Y H:i:s')
+                    ->label('Waktu')
+                    ->dateTime('d/m/y H:i')
                     ->description(fn (ActivityLog $record): string => $record->created_at?->diffForHumans() ?? '-')
-                    ->sortable(),
+                    ->sortable()
+                    ->size('sm'),
 
                 Tables\Columns\TextColumn::make('user_name')
-                    ->label('Pelaku / Pengguna')
+                    ->label('Pelaku')
                     ->weight('bold')
                     ->description(fn (ActivityLog $record): string => $record->user_role ?: 'Sistem')
-                    ->searchable(),
+                    ->searchable()
+                    ->size('sm'),
 
                 Tables\Columns\TextColumn::make('outlet_name')
-                    ->label('Cabang Toko')
+                    ->label('Cabang')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Semua Toko (Konsolidasi)' => 'info',
@@ -101,18 +103,20 @@ class ActivityLogResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('action_type')
-                    ->label('Tipe Aksi')
+                    ->label('Aksi')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'RESTORE' => '🔄 Pemulihan',
                         'PRICE_CHANGE' => '💰 Ubah Harga',
-                        'UPDATE' => '✏️ Pengeditan',
-                        'CREATE' => '➕ Penambahan',
-                        'DELETE' => '🗑️ Penghapusan',
-                        'STOCK_ADJUSTMENT' => '📦 Mutasi Stok',
-                        'SHIFT' => '⏰ Shift Kasir',
+                        'UPDATE' => '✏️ Edit',
+                        'CREATE' => '➕ Tambah',
+                        'DELETE' => '🗑️ Hapus',
+                        'STOCK_ADJUSTMENT' => '📦 Mutasi',
+                        'SHIFT' => '⏰ Shift',
                         default => $state,
                     })
                     ->color(fn (string $state): string => match ($state) {
+                        'RESTORE' => 'success',
                         'PRICE_CHANGE' => 'danger',
                         'UPDATE' => 'info',
                         'CREATE' => 'success',
@@ -134,6 +138,7 @@ class ActivityLogResource extends Resource
                 Tables\Filters\SelectFilter::make('action_type')
                     ->label('Filter Tipe Aksi')
                     ->options([
+                        'RESTORE' => '🔄 Pemulihan',
                         'PRICE_CHANGE' => '💰 Ubah Harga',
                         'UPDATE' => '✏️ Pengeditan',
                         'CREATE' => '➕ Penambahan',
@@ -156,10 +161,118 @@ class ActivityLogResource extends Resource
                     ->visible(fn () => !auth()->user()?->outlet_id),
             ])
             ->actions([
+                Tables\Actions\Action::make('pulihkan_barang')
+                    ->label('Pulihkan')
+                    ->button()
+                    ->size('xs')
+                    ->icon('heroicon-m-arrow-path')
+                    ->color('success')
+                    ->tooltip('Pulihkan kembali barang terhapus ini ke katalog toko')
+                    ->visible(function (ActivityLog $record) {
+                        if ($record->action_type !== 'DELETE' || $record->module !== 'Barang & Stok' || empty($record->old_values['sku'])) {
+                            return false;
+                        }
+                        $data = $record->old_values;
+                        $query = \App\Models\Product::where('sku', $data['sku']);
+                        if (!empty($data['outlet_id'])) {
+                            $query->where('outlet_id', $data['outlet_id']);
+                        } else {
+                            $query->whereNull('outlet_id');
+                        }
+                        return !$query->exists();
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Pulihkan Barang yang Dihapus?')
+                    ->modalDescription(fn (ActivityLog $record) => "Apakah Anda yakin ingin memulihkan kembali barang \"" . ($record->old_values['name'] ?? 'Barang') . "\" (SKU: " . ($record->old_values['sku'] ?? '-') . ") ke katalog toko Anda?")
+                    ->modalSubmitActionLabel('Ya, Pulihkan Sekarang')
+                    ->action(function (ActivityLog $record) {
+                        $data = $record->old_values;
+                        if (empty($data) || empty($data['sku'])) return;
+
+                        $existingQuery = \App\Models\Product::where('sku', $data['sku']);
+                        if (!empty($data['outlet_id'])) {
+                            $existingQuery->where('outlet_id', $data['outlet_id']);
+                        } else {
+                            $existingQuery->whereNull('outlet_id');
+                        }
+                        $existing = $existingQuery->first();
+                        if ($existing) {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('SKU Sudah Digunakan')
+                                ->body("Barang dengan SKU {$data['sku']} ({$existing->name}) saat ini sudah ada di katalog. Jika ingin memulihkan, silakan ganti atau hapus SKU yang duplikat terlebih dahulu.")
+                                ->send();
+                            return;
+                        }
+
+                        $prod = \App\Models\Product::withoutEvents(function () use ($data) {
+                            return \App\Models\Product::create([
+                                'outlet_id' => $data['outlet_id'] ?? null,
+                                'category_id' => $data['category_id'] ?? null,
+                                'sku' => $data['sku'],
+                                'name' => $data['name'],
+                                'slug' => ($data['slug'] ?? \Illuminate\Support\Str::slug($data['name'])) . '-' . substr(md5(uniqid()), 0, 6),
+                                'description' => $data['description'] ?? null,
+                                'base_price' => $data['base_price'] ?? 0,
+                                'cost_price' => $data['cost_price'] ?? 0,
+                                'is_active' => true,
+                                'track_inventory' => $data['track_inventory'] ?? true,
+                                'alert_at_stock' => $data['alert_at_stock'] ?? 3,
+                            ]);
+                        });
+
+                        if ($prod && $prod->outlet_id) {
+                            \App\Models\Inventory::withoutEvents(function () use ($prod) {
+                                return \App\Models\Inventory::firstOrCreate(
+                                    ['product_id' => $prod->id, 'outlet_id' => $prod->outlet_id],
+                                    ['quantity' => 0]
+                                );
+                            });
+                        }
+
+                        \App\Models\ActivityLog::record(
+                            'RESTORE',
+                            'Barang & Stok',
+                            "Memulihkan kembali barang terhapus ke dalam katalog: '{$prod->name}' (SKU: {$prod->sku}) dengan harga jual Rp " . number_format($prod->base_price, 0, ',', '.'),
+                            $prod,
+                            $data,
+                            $prod->toArray()
+                        );
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Barang Berhasil Dipulihkan!')
+                            ->body("Barang \"{$prod->name}\" (SKU: {$prod->sku}) telah dikembalikan ke katalog barang toko dengan harga jual Rp " . number_format($prod->base_price, 0, ',', '.') . ".")
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('sudah_dipulihkan')
+                    ->label('✓ Pulih')
+                    ->button()
+                    ->size('xs')
+                    ->color('gray')
+                    ->disabled()
+                    ->tooltip('Barang ini sudah dipulihkan dan saat ini aktif di dalam katalog toko')
+                    ->visible(function (ActivityLog $record) {
+                        if ($record->action_type !== 'DELETE' || $record->module !== 'Barang & Stok' || empty($record->old_values['sku'])) {
+                            return false;
+                        }
+                        $data = $record->old_values;
+                        $query = \App\Models\Product::where('sku', $data['sku']);
+                        if (!empty($data['outlet_id'])) {
+                            $query->where('outlet_id', $data['outlet_id']);
+                        } else {
+                            $query->whereNull('outlet_id');
+                        }
+                        return $query->exists();
+                    }),
+
                 Tables\Actions\Action::make('lihat_perubahan')
-                    ->label('Rincian Data')
-                    ->icon('heroicon-o-eye')
+                    ->label('Rincian')
+                    ->iconButton()
+                    ->icon('heroicon-m-eye')
                     ->color('primary')
+                    ->tooltip('Lihat rincian data sebelum & sesudah')
                     ->modalHeading(fn (ActivityLog $record) => "Rincian Log Audit #{$record->id} - {$record->action_type}")
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
