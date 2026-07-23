@@ -506,6 +506,7 @@
                                 <th class="py-3 px-4 text-left">Stok per Cabang</th>
                                 <th class="py-3 px-4 text-left">Harga</th>
                                 <th class="py-3 px-4 text-left">Kategori</th>
+                                <th class="py-3 px-4 text-left">Cabang</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y" style="divide-color: #f1f5f9;">
@@ -549,6 +550,11 @@
                                     <td class="py-3.5 px-4 font-bold sm:text-sm tabular-nums" style="color: #0f172a;">Rp {{ number_format($prod->base_price, 0, ',', '.') }}</td>
                                     <td class="py-3.5 px-4 font-semibold" style="color: #64748b;">
                                         {{ $prod->category?->name ?? '-' }}
+                                    </td>
+                                    <td class="py-3.5 px-4 font-semibold">
+                                        <span class="px-2 py-0.5 rounded text-[11px] bg-amber-50 text-amber-600 border border-amber-200">
+                                            {{ $prod->outlet?->name ?? '-' }}
+                                        </span>
                                     </td>
                                 </tr>
                             @empty
