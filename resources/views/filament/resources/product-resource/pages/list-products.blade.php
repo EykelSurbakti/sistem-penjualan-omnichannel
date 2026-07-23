@@ -545,21 +545,10 @@
                                         <div class="font-bold sm:text-sm" style="color: {{ $totalQty > 0 ? '#059669' : '#dc2626' }};">
                                             {{ $totalQty > 0 ? number_format($totalQty).' pcs' : 'Habis (0 pcs)' }}
                                         </div>
-                                        @if(count($invs) > 0 && !$userOutletId && !$this->bulkOutletId)
-                                            <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                                @foreach($invs as $i)
-                                                    <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold" style="background-color: {{ $i->quantity > 0 ? '#eff6ff' : '#f8fafc' }}; color: {{ $i->quantity > 0 ? '#1d4ed8' : '#64748b' }}; border: 1px solid {{ $i->quantity > 0 ? '#bfdbfe' : '#e2e8f0' }};">
-                                                        {{ $i->outlet?->name ?: 'Toko' }}: {{ $i->quantity }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        @endif
                                     </td>
                                     <td class="py-3.5 px-4 font-bold sm:text-sm tabular-nums" style="color: #0f172a;">Rp {{ number_format($prod->base_price, 0, ',', '.') }}</td>
                                     <td class="py-3.5 px-4 font-semibold" style="color: #64748b;">
-                                        <span class="px-2.5 py-1 rounded-full text-xs" style="background-color: #f1f5f9; color: #475569;">
-                                            {{ $prod->category?->name ?? 'UMUM' }}
-                                        </span>
+                                        {{ $prod->category?->name ?? '-' }}
                                     </td>
                                 </tr>
                             @empty
