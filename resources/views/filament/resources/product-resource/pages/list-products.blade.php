@@ -102,6 +102,7 @@
                         <th class="px-4 py-3 text-left" style="min-width:240px">Inventaris & Stok Toko</th>
                         <th class="px-4 py-3 text-left" style="min-width:110px">Harga</th>
                         <th class="px-4 py-3 text-left" style="min-width:110px">Kategori</th>
+                        <th class="px-4 py-3 text-left" style="min-width:110px">Cabang</th>
                         <th class="px-4 py-3 text-left" style="min-width:145px">Tanggal Dibuat</th>
                         <th class="px-4 py-3 text-left" style="min-width:100px">Aksi</th>
                     </tr>
@@ -131,14 +132,9 @@
                                 </div>
                             </td>
 
-                            {{-- Inventaris & Stok Toko lengkap breakdown --}}
                             <td class="px-4 py-3">
                                 @php
-                                    $userOutletId = auth()->user()?->outlet_id;
-                                    $activeOutletId = $userOutletId ?: $this->outletId;
-                                    $invs = $product->inventories ?? collect();
-                                    $filteredInv = $activeOutletId ? $invs->where('outlet_id', $activeOutletId)->first() : null;
-                                    $qty = $activeOutletId ? ($filteredInv ? (int)$filteredInv->quantity : 0) : (int)($product->total_qty ?? $invs->sum('quantity'));
+                                    $qty = (int)($product->total_qty ?? 0);
                                 @endphp
                                 <div class="font-bold text-gray-900 dark:text-white text-sm">
                                     @if ($qty > 0)
@@ -147,19 +143,6 @@
                                         <span class="text-red-600 dark:text-red-400 font-extrabold">Stok habis (0 pcs)</span>
                                     @endif
                                 </div>
-                                @if(count($invs) > 0 && !$userOutletId && !$this->outletId)
-                                    <div class="flex flex-wrap gap-1 mt-1.5">
-                                        @foreach($invs as $inv)
-                                            @php
-                                                $invQty = (int)$inv->quantity;
-                                            @endphp
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border {{ $invQty > 0 ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800' : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' }}">
-                                                <span>🏪 {{ $inv->outlet?->name ?: 'Toko' }}:</span>
-                                                <span class="font-black {{ $invQty <= 0 ? 'text-red-500' : '' }}">{{ number_format($invQty) }}</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @endif
                             </td>
 
                             {{-- Harga --}}
@@ -169,7 +152,14 @@
 
                             {{-- Kategori --}}
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
-                                {{ $product->category?->name ?? 'UMUM' }}
+                                {{ $product->category?->name ?? '-' }}
+                            </td>
+
+                            {{-- Cabang --}}
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                                <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 px-2 py-0.5 rounded text-xs font-semibold">
+                                    {{ $product->outlet?->name ?? '-' }}
+                                </span>
                             </td>
 
                             {{-- Tanggal Dibuat --}}
@@ -234,33 +224,25 @@
                                     Rp {{ number_format($product->base_price, 0, ',', '.') }}
                                 </span>
                                 <span class="text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-1.5 py-0.5 rounded">
-                                    {{ $product->category?->name ?? 'UMUM' }}
+                                    {{ $product->category?->name ?? '-' }}
+                                </span>
+                                <span class="text-[10px] font-medium text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-500 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                                    {{ $product->outlet?->name ?? '-' }}
                                 </span>
                             </div>
                             {{-- Stok di Mobile --}}
                             <div class="mt-2.5">
                                 @php
-                                    $userOutletId = auth()->user()?->outlet_id;
-                                    $activeOutletId = $userOutletId ?: $this->outletId;
-                                    $invs = $product->inventories ?? collect();
-                                    $filteredInv = $activeOutletId ? $invs->where('outlet_id', $activeOutletId)->first() : null;
-                                    $qty = $activeOutletId ? ($filteredInv ? (int)$filteredInv->quantity : 0) : (int)($product->total_qty ?? $invs->sum('quantity'));
+                                    $qty = (int)($product->total_qty ?? 0);
                                 @endphp
                                 <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-bold {{ $qty > 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300 border border-red-200 dark:border-red-800' }}">
                                     <span class="w-1.5 h-1.5 rounded-full {{ $qty > 0 ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
-                                    <span>{{ $qty > 0 ? number_format($qty).' pcs dalam stok' : 'Stok habis (0 pcs)' }}</span>
+                                    @if($qty > 0)
+                                        {{ number_format($qty) }} pcs
+                                    @else
+                                        Habis (0 pcs)
+                                    @endif
                                 </div>
-                                @if(count($invs) > 0 && !$userOutletId && !$this->outletId)
-                                    <div class="flex flex-wrap gap-1 mt-1.5">
-                                        @foreach($invs as $inv)
-                                            @php $invQty = (int)$inv->quantity; @endphp
-                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border {{ $invQty > 0 ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800' : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' }}">
-                                                <span>{{ $inv->outlet?->name ?: 'Toko' }}:</span>
-                                                <span class="font-black {{ $invQty <= 0 ? 'text-red-500' : '' }}">{{ number_format($invQty) }}</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @endif
                             </div>
                         </div>
                     </div>

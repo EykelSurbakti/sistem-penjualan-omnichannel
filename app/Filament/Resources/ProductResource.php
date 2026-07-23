@@ -25,38 +25,15 @@ class ProductResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()->with(['category']);
-
         if (auth()->check() && auth()->user()->outlet_id) {
-            $outletId = auth()->user()->outlet_id;
-            $query->where(function ($q) use ($outletId) {
-                $q->where('outlet_id', $outletId)->orWhereNull('outlet_id');
-            })
-            ->withSum(['inventories as total_qty' => fn ($q) => $q->where('outlet_id', $outletId)], 'quantity');
-        } else {
-            $query->withSum('inventories as total_qty', 'quantity');
+            $query->where('outlet_id', auth()->user()->outlet_id);
         }
-
+        $query->withSum('inventories as total_qty', 'quantity');
         return $query;
     }
 
     public static function form(Form $form): Form
     {
-        $outlets = \App\Models\Outlet::orderBy('id')->get();
-        $outletSchemas = [];
-        foreach ($outlets as $outlet) {
-            $outletSchemas[] = Forms\Components\TextInput::make('qty_outlet_' . $outlet->id)
-                ->label('Stok di ' . $outlet->name)
-                ->numeric()
-                ->mask(\Filament\Support\RawJs::make('$money($input)'))
-                ->stripCharacters(',')
-                ->placeholder('0')
-                ->default(null)
-                ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
-                ->prefix('Pcs')
-                ->visible(fn () => !auth()->user()?->outlet_id)
-                ->extraInputAttributes(['onfocus' => 'this.select()']);
-        }
-
         return $form
             ->schema([
                 Forms\Components\Section::make('Informasi Dasar Barang')
@@ -67,6 +44,11 @@ class ProductResource extends Resource
                             ->relationship('category', 'name')
                             ->searchable()
                             ->preload()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nama Kategori')
+                                    ->required(),
+                            ])
                             ->placeholder('Pilih Kategori...'),
                         Forms\Components\TextInput::make('sku')
                             ->label('SKU / Kode Barang')
@@ -88,7 +70,25 @@ class ProductResource extends Resource
 
                 Forms\Components\Section::make('Harga Jual & Pengaturan Stok')
                     ->description('Atur harga jual toko serta stok persediaan cabang')
-                    ->schema(array_merge([
+                    ->schema([
+                        Forms\Components\Select::make('outlet_id')
+                            ->label('Cabang Toko')
+                            ->relationship('outlet', 'name')
+                            ->required()
+                            ->default(fn () => auth()->user()?->outlet_id)
+                            ->disabled(fn () => auth()->user()?->outlet_id !== null)
+                            ->dehydrated()
+                            ->visible(fn () => auth()->user()?->outlet_id === null),
+                        Forms\Components\TextInput::make('qty')
+                            ->label('Stok Fisik Awal')
+                            ->numeric()
+                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->placeholder('0')
+                            ->default(0)
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
+                            ->prefix('Pcs')
+                            ->extraInputAttributes(['onfocus' => 'this.select()']),
                         Forms\Components\TextInput::make('base_price')
                             ->label('Harga Jual Toko (Rp)')
                             ->required()
@@ -111,18 +111,6 @@ class ProductResource extends Resource
                             ->default(null)
                             ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (float) str_replace(',', '', (string) $state))
                             ->extraInputAttributes(['onfocus' => 'this.select()']),
-                        Forms\Components\TextInput::make('qty_user_outlet')
-                            ->label(fn () => 'Stok di ' . (auth()->user()?->outlet?->name ?: 'Cabang Anda'))
-                            ->numeric()
-                            ->mask(\Filament\Support\RawJs::make('$money($input)'))
-                            ->stripCharacters(',')
-                            ->placeholder('0')
-                            ->default(null)
-                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? 0 : (int) str_replace(',', '', (string) $state))
-                            ->prefix('Pcs')
-                            ->visible(fn () => (bool) auth()->user()?->outlet_id)
-                            ->extraInputAttributes(['onfocus' => 'this.select()']),
-                    ], $outletSchemas, [
                         Forms\Components\Select::make('soldout_strategy')
                             ->label('Saat Stok Fisik Habis')
                             ->options([
@@ -137,7 +125,7 @@ class ProductResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Aktif Dijual di Kasir')
                             ->default(true),
-                    ]))->columns(2),
+                    ])->columns(2),
             ]);
     }
 
@@ -177,13 +165,19 @@ class ProductResource extends Resource
                     ->sortable()
                     ->weight('semibold'),
 
-                // Kolom 4: Kategori (menggantikan Tipe di iSeller)
+                // Kolom 4: Kategori
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Kategori')
                     ->sortable()
                     ->badge()
                     ->color('info')
-                    ->default('Umum'),
+                    ->default('-'),
+
+                Tables\Columns\TextColumn::make('outlet.name')
+                    ->label('Toko/Cabang')
+                    ->sortable()
+                    ->badge()
+                    ->color('warning'),
 
                 // Kolom 5: Tanggal Dibuat (persis iSeller)
                 Tables\Columns\TextColumn::make('created_at')
@@ -205,35 +199,11 @@ class ProductResource extends Resource
                 Tables\Actions\DeleteAction::make()
                     ->label('Hapus')
                     ->icon('heroicon-m-trash')
-                    ->action(function (Product $record, $livewire) {
-                        $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) 
-                            ? auth()->user()->outlet_id 
-                            : (isset($livewire->bulkOutletId) && $livewire->bulkOutletId ? $livewire->bulkOutletId : (isset($livewire->outletId) && $livewire->outletId ? $livewire->outletId : null));
-                        if ($activeOutletScope) {
-                            $hasOtherStores = \App\Models\Inventory::where('product_id', $record->id)
-                                ->where('outlet_id', '!=', $activeOutletScope)
-                                ->exists();
-                            if ($hasOtherStores || ($record->outlet_id && $record->outlet_id != $activeOutletScope)) {
-                                \App\Models\Inventory::where('product_id', $record->id)
-                                    ->where('outlet_id', $activeOutletScope)
-                                    ->delete();
-                                if ($record->outlet_id == $activeOutletScope) {
-                                    $record->outlet_id = null;
-                                    $record->save();
-                                }
-                                $outletName = \App\Models\Outlet::find($activeOutletScope)?->name ?? 'Toko Ini';
-                                \Filament\Notifications\Notification::make()
-                                    ->title("Barang Dilepas dari {$outletName}")
-                                    ->body("Barang \"{$record->name}\" dihapus dari {$outletName} (cabang toko lain yang memiliki barang ini tetap utuh & aman).")
-                                    ->success()
-                                    ->send();
-                                return;
-                            }
-                        }
+                    ->action(function (Product $record) {
                         $record->delete();
                         \Filament\Notifications\Notification::make()
                             ->title('Barang Dihapus')
-                            ->body("Barang \"{$record->name}\" berhasil dihapus.")
+                            ->body("Barang \"{$record->name}\" berhasil dihapus dari cabang ini.")
                             ->success()
                             ->send();
                     }),
@@ -242,35 +212,15 @@ class ProductResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('Hapus Terpilih')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, $livewire) {
-                            $activeOutletScope = (auth()->check() && auth()->user()->outlet_id) 
-                                ? auth()->user()->outlet_id 
-                                : (isset($livewire->bulkOutletId) && $livewire->bulkOutletId ? $livewire->bulkOutletId : (isset($livewire->outletId) && $livewire->outletId ? $livewire->outletId : null));
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
                             $deletedCount = 0;
                             foreach ($records as $product) {
-                                if ($activeOutletScope) {
-                                    $hasOtherStores = \App\Models\Inventory::where('product_id', $product->id)
-                                        ->where('outlet_id', '!=', $activeOutletScope)
-                                        ->exists();
-                                    if ($hasOtherStores || ($product->outlet_id && $product->outlet_id != $activeOutletScope)) {
-                                        \App\Models\Inventory::where('product_id', $product->id)
-                                            ->where('outlet_id', $activeOutletScope)
-                                            ->delete();
-                                        if ($product->outlet_id == $activeOutletScope) {
-                                            $product->outlet_id = null;
-                                            $product->save();
-                                        }
-                                        $deletedCount++;
-                                        continue;
-                                    }
-                                }
                                 $product->delete();
                                 $deletedCount++;
                             }
-                            $outletName = $activeOutletScope ? (\App\Models\Outlet::find($activeOutletScope)?->name ?? 'Cabang Terpilih') : 'Katalog Global';
                             \Filament\Notifications\Notification::make()
-                                ->title('Penghapusan Berhasil')
-                                ->body("Sebanyak {$deletedCount} produk telah dihapus/dilepas dari {$outletName}.")
+                                ->title('Barang Terhapus')
+                                ->body("{$deletedCount} barang berhasil dihapus dari cabang masing-masing.")
                                 ->success()
                                 ->send();
                         }),
